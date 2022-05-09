@@ -101,6 +101,7 @@ ia32_COMP_PREFIX	:= /usr/bin/x86_64-linux-gnu-
 armv7_COMP_PREFIX	:= /usr/bin/arm-none-eabi-
 armv8_COMP_PREFIX	:= /usr/bin/aarch64-linux-gnu-
 rv32_COMP_PREFIX	:= /usr/local/rv32/bin/riscv32-unknown-linux-gnu-
+# rv32_COMP_PREFIX	:= /usr/bin/riscv64-linux-gnu-
 rv64_COMP_PREFIX	:= /usr/bin/riscv64-linux-gnu-
 COMP_PREFIX		= $($(ARCH)_COMP_PREFIX)
 
@@ -109,7 +110,7 @@ ARCH_ENDIANESS		= $(ARCH_$(call GETTK,ENDIANESS,$(ARCH_TRAITS)))
 ARCH_WORD_SIZE		= $(call GETTK,WORD_SIZE,$(ARCH_TRAITS))
 ARCH_CLOCK		= $(call GETTK,CLOCK,$(ARCH_TRAITS))
 CC_M_FLAG		= -m$(ARCH_WORD_SIZE)
-#QEMU_DEBUG      = -D $(addsuffix .log,$(APPLICATION)) -d int,mmu
+QEMU_DEBUG      = -D $(addsuffix .log,$(APPLICATION)) -d int,mmu
 
 # Machine specifics
 pc_CC_FLAGS		= $(CC_M_FLAG) -Wa,--32
@@ -196,7 +197,7 @@ ifeq ($(MMOD),sifive_e)
 riscv_CC_FLAGS		:= -march=rv32gc -mabi=ilp32f -Wl, -mno-relax
 riscv_AS_FLAGS		:= -march=rv32gc -mabi=ilp32f
 riscv_LD_FLAGS		:= -m elf32lriscv_ilp32f --no-relax
-riscv_EMULATOR		= qemu-system-riscv32 $(QEMU_DEBUG) -machine virt -cpu rv32 -smp $(CPUS) -m $(MEM_SIZE)k -serial mon:stdio -bios none -nographic -no-reboot $(BOOT_ROM) -kernel 
+riscv_EMULATOR		= qemu-system-riscv32 $(QEMU_DEBUG) -machine sifive_u -cpu rv32 -smp 2 -m $(MEM_SIZE)k -serial mon:stdio -bios none -nographic -no-reboot -kernel 
 riscv_DEBUGGER		:= $(COMP_PREFIX)gdb
 riscv_FLASHER		:= 
 riscv_MAGIC		:= --nmagic

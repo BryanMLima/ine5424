@@ -13,7 +13,6 @@ class UART: private UART_Common
 {
 private:
 
-    typedef CPU::Reg8 Reg8;
     typedef CPU::Reg32 Reg32;
 
     static const unsigned int UNIT = Traits<UART>::DEF_UNIT;
@@ -24,16 +23,13 @@ private:
 
     // UART registers offsets from UART_BASE
     enum {
-        DIV_LSB         = 0,
-        TXD             = 0,
-        RXD             = 0,
-        IER             = 1,
-        DIV_MSB         = 1,
-        FCR             = 2,
-        ISR             = 2,
-        LCR             = 3,
-        MCR             = 4,
-        LSR             = 5
+        TX_DATA             = 0x00, //Transmit data register
+        RX_DATA             = 0x04, //Receive data registe
+        TX_CTRL             = 0x08, //Transmit control register
+        RX_CTRL             = 0x0c, //Receive control register
+        IE                  = 0x10, //UART interrupt enable
+        IP                  = 0x14, //UART interrupt pending
+        DIV                 = 0x18 //Baud rate divisor
     };
 
     // Useful bits from multiple registers
@@ -47,7 +43,11 @@ private:
         STOP_BITS_MASK      = 1 << 2,
         LOOPBACK_MASK       = 1 << 4,
         FIFO_ENABLE         = 1 << 0,
-        DEFAULT_DATA_BITS   = 5
+        DEFAULT_DATA_BITS   = 5,
+        TXEN                = 1 << 0, //Transmit enable
+        RXEN                = 1 << 0, //Receive enable
+        TX_DATA_FULL        = 1 << 31,
+        RX_DATA_EMPTY       = 1 << 31
     };
 
 public:
@@ -61,96 +61,52 @@ public:
     }
 
     void config(unsigned int baud_rate, unsigned int data_bits, unsigned int parity, unsigned int stop_bits) {
-        // 0x3 for 8, 0x2 for 7, 0x1 for 6 and default (0x0) is 5 bits
-        Reg8 word_length = Reg8(data_bits - DEFAULT_DATA_BITS);
-        reg(LCR) = word_length;
-        reg(FCR) = FIFO_ENABLE;
+        Reg32 br = Traits<UART>::CLOCK / (reg(DIV) + 1);
+        Reg32 div = br << 16;
+        reg(DIV) = div;
 
-        // If we cared about the divisor, the code below would set the divisor
-        // from a global clock rate of 22.729 MHz (22,729,000 cycles per second)
-        // to a signaling rate of 115200 (BAUD). We usually have much faster signalling
-        // rates nowadays, but this demonstrates what the divisor actually does.
-        // The formula given in the NS16500A specification for calculating the divisor
-        // is:
-        // divisor = ceil( (clock_hz) / (baud_sps x 16) )
-        Reg32 br = Traits<UART>::CLOCK / BAUD_RATE;
-        if (Traits<UART>::CLOCK / br > BAUD_RATE) {
-            br += 1;
-        } // get ceiling
-        Reg8 div_least = Reg8(br & 0xff);
-        Reg8 div_most = Reg8(br >> 8);
-
-        // Notice that the divisor register DLL (divisor latch least) and DLM (divisor
-        // latch most) have the same base address as the receiver/transmitter and the
-        // interrupt enable register. To change what the base address points to, we
-        // open the "divisor latch" by writing 1 into the Divisor Latch Access Bit
-        // (DLAB), which is bit index 7 of the Line Control Register (LCR) which
-        // is at base_address + 3.
-        reg(LCR) = (word_length | DLAB_ENABLE);
-
-        // Now, base addresses 0 and 1 point to DLL and DLM, respectively.
-        // Put the lower 8 bits of the divisor into DLL
-        reg(DIV_LSB) = div_least;
-        reg(DIV_MSB) = div_most;
-
-        // Now that we've written the divisor, we never have to touch this again. In 
-        // hardware, this will divide the global clock (22.729 MHz) into one suitable
-        // for 115200 signals per second. So, to once again get access to the 
-        // RBR/THR/IER registers, we need to close the DLAB bit by clearing it to 0.
-        reg(LCR) = word_length;
+        reg(TX_CTRL) = Reg32(0);
+        reg(RX_CTRL) = Reg32(0);
+        reg(IE)      = Reg32(0);
     }
 
     void config(unsigned int * baud_rate, unsigned int * data_bits, unsigned int * parity, unsigned int * stop_bits) {
-        *data_bits = Reg32(reg(LCR) & DATA_BITS_MASK) + DEFAULT_DATA_BITS;
+        *baud_rate = Traits<UART>::CLOCK / (reg(DIV) + 1);
 
-        reg(LCR) = (*data_bits | DLAB_ENABLE);
-        unsigned int div = Reg32(reg(DIV_MSB) << 8) | Reg32(reg(DIV_LSB));
-        reg(LCR) = *data_bits;
-        *baud_rate = Traits<UART>::CLOCK / div;
+        *parity = 0;
 
-        *parity = (Reg32(reg(LCR)) & PARITY_MASK) >> PARITY_MASK;
-
-        *stop_bits = (Reg32(reg(LCR) & STOP_BITS_MASK) >> STOP_BITS_MASK) + 1;
+        *stop_bits = 1;
     }
 
-    Reg8 rxd() { 
-        return reg(RXD);
+    Reg32 rxd() { 
+        return reg(RX_DATA);
     }
-    void txd(Reg8 c) { 
-        reg(TXD) = c;
-    }
-
-    bool rxd_ok() { 
-        return (reg(LSR) & DATA_READY); 
+    void txd(Reg32 c) { 
+        reg(TX_DATA) = c;
     }
 
-    bool txd_ok() { 
-        return (reg(LSR) & THOLD_REG);
+    bool rxd_not_ok() { // Changing name because it is not possible to negate enum
+        return (reg(RX_DATA) & RX_DATA_EMPTY); 
     }
 
-    bool rxd_full() { return false; } //still not defined
+    bool txd_not_ok() { // Changing name because it is not possible to negate enum
+        return (reg(TX_DATA) & TX_DATA_FULL);
+    }
+
+    bool rxd_full() { return txd_not_ok(); }
     
-    bool txd_empty() { 
-        return (reg(LSR) & TEMPTY_REG); 
-    }
+    bool txd_empty() { return rxd_not_ok(); }
 
     bool busy() {
         return false; // not applicable
     }
 
-    char get() { while(!rxd_ok()); return rxd(); }
-    void put(char c) { while(!txd_ok()); txd(c); }
+    char get() { while(rxd_not_ok()); return rxd(); }
+    void put(char c) { while(txd_not_ok()); txd(c); }
 
     void flush() { while(!txd_empty()); }
-    bool ready_to_get() { return rxd_ok(); }
-    bool ready_to_put() { return txd_ok(); }
-
-    void int_enable(bool receive = true, bool transmit = true, bool line = true, bool modem = true) {
-        reg(IER) = receive | (transmit << 1) | (line << 2) | (modem << 3);
-    }
-    void int_disable(bool receive = true, bool transmit = true, bool line = true, bool modem = true) {
-        reg(IER) = reg(IER) & ~(receive | (transmit << 1) | (line << 2) | (modem << 3));
-    }
+    bool ready_to_get() { return !rxd_not_ok(); }
+    bool ready_to_put() { return !txd_not_ok(); }
 
     void reset() {
         // Reconfiguring the UART implicitly resets it
@@ -159,19 +115,12 @@ public:
         config(b, db, p, sb);
     }
 
-    void loopback(bool flag) {
-        Reg8 mask = 0xff;
-        mask -= LOOPBACK_MASK;
-        mask += (flag << 4); // if 1, restore flag, else make it disable loopback
-        reg(MCR) = reg(MCR) & mask; 
-    }
-
     void power(const Power_Mode & mode) {}
 
 private:
     static void init() {}
 
-    static volatile CPU::Reg8 & reg(unsigned int o) { return reinterpret_cast<volatile CPU::Reg8 *>(Memory_Map::UART_BASE)[o / sizeof(CPU::Reg8)]; }
+    static volatile CPU::Reg32 & reg(unsigned int o) { return reinterpret_cast<volatile CPU::Reg32 *>(Memory_Map::UART_BASE)[o / sizeof(CPU::Reg32)]; }
 };
 
 __END_SYS
