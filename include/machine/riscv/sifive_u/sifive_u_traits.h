@@ -21,6 +21,8 @@ public:
     static const unsigned int CPUS              = Traits<Build>::CPUS;
 
     // Physical Memory
+    static const unsigned int ROM_BASE          = 0x20400000;                           // 512 MB
+    static const unsigned int ROM_TOP           = 0x3fffffff;                           // 512 MB + 512 MB
     static const unsigned int RAM_BASE          = 0x80000000;                           // 2 GB
     static const unsigned int RAM_TOP           = 0x87ffffff;                           // 2 GB + 128 MB (max 1536 MB of RAM => RAM + MIO < 2 G)
     static const unsigned int MIO_BASE          = 0x00000000;

@@ -35,7 +35,7 @@ public:
         if(Traits<System>::reboot) {
             db<Machine>(WRN) << "Machine::reboot()" << endl;
 
-#ifdef __sifive_e__
+#ifdef __sifive_u__
             CPU::Reg * reset = reinterpret_cast<CPU::Reg *>(Memory_Map::AON_BASE);
 #else
             CPU::Reg * reset = reinterpret_cast<CPU::Reg *>(Memory_Map::TEST_BASE);
@@ -52,7 +52,7 @@ public:
     {
         db<Machine>(WRN) << "Machine::poweroff()" << endl;
 
-#ifdef __sifive_e__
+#ifdef __sifive_u__ 
         CPU::Reg * reset = reinterpret_cast<CPU::Reg *>(Memory_Map::AON_BASE);
 #else
         CPU::Reg * reset = reinterpret_cast<CPU::Reg *>(Memory_Map::TEST_BASE);
