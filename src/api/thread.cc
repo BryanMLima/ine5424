@@ -14,6 +14,7 @@ __BEGIN_SYS
 extern "C" { void __epos_app_entry(); }
 
 volatile unsigned int Thread::_thread_count;
+volatile unsigned int Thread::_resched_count;
 Scheduler_Timer * Thread::_timer;
 
 Thread* volatile Thread::_running;
@@ -298,6 +299,8 @@ void Thread::wakeup_all(Queue * q)
 
 void Thread::reschedule()
 {
+    _resched_count++;
+    cout << "Teste" << _resched_count << endl;
     yield();
 }
 
