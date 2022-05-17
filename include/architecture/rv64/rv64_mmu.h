@@ -1,14 +1,14 @@
-// EPOS RISC-V 32 MMU Mediator Declarations
+// EPOS RISC-V 64 MMU Mediator Declarations
 
-#ifndef __rv32_mmu_h
-#define __rv32_mmu_h
+#ifndef __rv64_mmu_h
+#define __rv64_mmu_h
 
 #include <architecture/mmu.h>
 #include <system/memory_map.h>
 
 __BEGIN_SYS
 
-class RV32S_MMU: public MMU_Common<10, 10, 12>
+class RV64S_MMU: public MMU_Common<10, 10, 12>
 {
     friend class CPU;
     friend class Setup;
@@ -223,7 +223,7 @@ public:
 
         Phy_Addr pd() const { return _pd; }
 
-        void activate() const { RV32S_MMU::pd(_pd); }
+        void activate() const { RV64S_MMU::pd(_pd); }
 
         Log_Addr attach(const Chunk & chunk, unsigned int from = directory(APP_LOW)) {
             for(unsigned int i = from; i < PD_ENTRIES; i++)
@@ -341,7 +341,7 @@ public:
     };
 
 public:
-    RV32S_MMU() {}
+    RV64S_MMU() {}
 
     static Phy_Addr alloc(unsigned int frames = 1, Color color = WHITE) {
         Phy_Addr phy(false);
@@ -438,7 +438,7 @@ private:
     static Page_Directory * _master;
 };
 
-class MMU: public IF<Traits<System>::multitask, RV32S_MMU, No_MMU>::Result {};
+class MMU: public IF<Traits<System>::multitask, RV64S_MMU, No_MMU>::Result {};
 
 __END_SYS
 
