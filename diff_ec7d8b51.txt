@@ -1,0 +1,1707 @@
+diff --git a/app/hello/hello_traits.h b/app/hello/hello_traits.h
+index b739431..47f3ba0 100644
+--- a/app/hello/hello_traits.h
++++ b/app/hello/hello_traits.h
+@@ -12,7 +12,7 @@ template<> struct Traits<Build>: public Traits_Tokens
+     static const unsigned int MODE = LIBRARY;
+     static const unsigned int ARCHITECTURE = RV32;
+     static const unsigned int MACHINE = RISCV;
+-    static const unsigned int MODEL = SiFive_E; 
++    static const unsigned int MODEL = SiFive_U; 
+     static const unsigned int CPUS = 1;
+     static const unsigned int NODES = 1; // (> 1 => NETWORKING)
+     static const unsigned int EXPECTED_SIMULATION_TIME = 60; // s (0 => not simulated)
+diff --git a/app/philosophers_dinner/philosophers_dinner_traits.h b/app/philosophers_dinner/philosophers_dinner_traits.h
+index 1f0115b..526373b 100644
+--- a/app/philosophers_dinner/philosophers_dinner_traits.h
++++ b/app/philosophers_dinner/philosophers_dinner_traits.h
+@@ -12,7 +12,7 @@ template<> struct Traits<Build>: public Traits_Tokens
+     static const unsigned int MODE = LIBRARY;
+     static const unsigned int ARCHITECTURE = RV32;
+     static const unsigned int MACHINE = RISCV;
+-    static const unsigned int MODEL = SiFive_E;
++    static const unsigned int MODEL = SiFive_U;
+     static const unsigned int CPUS = 1;
+     static const unsigned int NODES = 1; // (> 1 => NETWORKING)
+     static const unsigned int EXPECTED_SIMULATION_TIME = 60; // s (0 => not simulated)
+diff --git a/include/architecture/rv32/rv32_pmu.h b/include/architecture/rv32/rv32_pmu.h
+new file mode 100644
+index 0000000..40da0a2
+--- /dev/null
++++ b/include/architecture/rv32/rv32_pmu.h
+@@ -0,0 +1,139 @@
++// EPOS rv32 PMU Mediator Declarations
++
++#ifndef __rv32_pmu_h
++#define __rv32_pmu_h
++
++#include <architecture/cpu.h>
++#include <architecture/pmu.h>
++#include <machine/ic.h>
++#include <utility/handler.h>
++
++__BEGIN_SYS
++
++class RV32_PMU_U: public PMU_Common
++{
++    private:
++        typedef CPU::Reg32 Reg32;
++        typedef CPU::Reg64 Reg64;
++
++    public:
++        // Instruction Commit Events, mhpeventX[7:0] = 0
++        enum {
++            EXCEPTION_TAKEN                            = 1 << 8,
++            INTEGER_LOAD_INSTRUCTION_RETIRED           = 1 << 9,
++            INTEGER_STORE_INSTRUCTION_RETIRED          = 1 << 10,
++            ATOMIC_MEMORY_OPERATION_RETIRED            = 1 << 11,
++            SYSTEM_INSTRUCTION_RETIRED                 = 1 << 12,
++            INTEGER_ARITHMETIC_INSTRUCTION_RETIRED     = 1 << 13,
++            CONDITIONAL_BRANCH_RETIRED                 = 1 << 14,
++            JAL_INSTRUCTION_RETIRED                    = 1 << 15,
++            JALR_INSTRUCTION_RETIRED                   = 1 << 16,
++            INTEGER_MULTIPLICATION_INSTRUCTION_RETIRED = 1 << 17,
++            INTEGER_DIVISION_INSTRUCTION_RETIRED       = 1 << 18,
++        };
++
++        // Microarchitectural Events , mhpeventX[7:0] = 1
++        enum {
++            LOAD_USE_INTERLOCK                         = 1 << 8,
++            LONG_LATENCY_INTERLOCK                     = 1 << 9,
++            CSR_READ_INTERLOCK                         = 1 << 10,
++            INSTRUCTION_CACHE_ITIM_BUSY                = 1 << 11,
++            DATA_CACHE_DTIM_BUSY                       = 1 << 12,
++            BRANCH_DIRECTION_MISPREDICTION             = 1 << 13,
++            BRANCH_JUMP_TARGET_MISPREDICTION           = 1 << 14,
++            PIPELINE_FLUSH_FROM_CSR_WRITE              = 1 << 15,
++            PIPELINE_FLUSH_FROM_OTHER_EVENT            = 1 << 16,
++            INTEGER_MULTIPLICATION_INTERLOCK           = 1 << 17,
++        };
++        
++        // Memory System Events, mhpeventX[7:0] = 2
++        enum {
++            INSTRUCTION_CACHE_MISS                      = 1 << 8,
++            MEMORY_MAPPED_IO_ACCESS                     = 1 << 9,
++        };
++
++        RV32_PMU_U() {}
++
++        static void init();
++
++        static Reg64 read_mcycle() {
++            Reg64 lower = mcycle() & 0x0000ffff;
++            Reg32 upper = mcycleh();
++            return upper | lower;
++        }
++
++        static Reg64 read_minstret() {
++            long lower = minstret() & 0x0000ffff;
++            long upper = minstreth();
++            return upper | lower;
++        }
++
++        static Reg64 read_mhpmcounter3() {
++            long lower = mhpmcounter3() & 0x0000ffff;
++            long upper = mhpmcounter3h();
++            return upper | lower;
++        }
++
++        static Reg64 read_mhpmcounter4() {
++            long lower = mhpmcounter4() & 0x0000ffff;
++            long upper = mhpmcounter4h();
++            return upper | lower;
++        }
++
++        static void write_mhpmcounter3(Reg64 value) {
++            mhpmcounter3(value & 0x0000ffff);
++            mhpmcounter3h(value & 0xffff0000);
++        }
++
++        static void write_mhpmcounter4(Reg64 value) {
++            mhpmcounter4(value & 0x0000ffff);
++            mhpmcounter4h(value & 0xffff0000);
++        }
++
++        static Reg32 read_mhpmevent3() {
++            return mhpmevent3();
++        }
++
++        static Reg32 read_mhpmevent4() {
++            return mhpmevent4();
++        }
++
++        static void write_mhpmevent3(Reg32 r) {
++            mhpmevent3(r);
++        }
++
++        static void write_mhpmevent4(Reg32 r) {
++            mhpmevent4(r);
++        }
++
++    private:
++        // We later discovered that this CSR are hard wired to zero. Therefore, it's useless in the current scenario.
++        // We only maintained because it took a while to test it, and maybe it can be usefull in the future.
++        static Reg64 mhpmcounter3() { Reg64 reg; ASM("csrr %0, mhpmcounter3\n\t" : "=r"(reg) : ); return reg; }
++        static void mhpmcounter3(Reg64 r) {  ASM("csrw mhpmcounter3, %0" : : "r"(r) :); }
++
++        static Reg32 mhpmcounter3h() { Reg32 reg; ASM("csrr %0, mhpmcounter3h\n\t" : "=r"(reg) : ); return reg; }
++        static void mhpmcounter3h(Reg32 r) {  ASM("csrw mhpmcounter3h, %0" : : "r"(r) :); }
++
++        static Reg64 mhpmcounter4() { Reg64 reg; ASM("csrr %0, mhpmcounter4\n\t" : "=r"(reg) : ); return reg; }
++        static void mhpmcounter4(Reg64 r) {  ASM("csrw mhpmcounter4, %0" : : "r"(r) :); }
++
++        static Reg32 mhpmcounter4h() { Reg32 reg; ASM("csrr %0, mhpmcounter4h\n\t" : "=r"(reg) : ); return reg; }
++        static void mhpmcounter4h(Reg32 r) {  ASM("csrw mhpmcounter4h, %0" : : "r"(r) :); }
++
++        static Reg32 mhpmevent3() { Reg32 reg; ASM("csrr %0, mhpmevent6\n\t" : "=r"(reg) : ); return reg; }
++        static void mhpmevent3(Reg32 r) {  ASM("csrw mhpmevent3, %0" : : "r"(r) :); }
++
++        static Reg32 mhpmevent4() { Reg32 reg; ASM("csrr %0, mhpmevent4\n\t" : "=r"(reg) : ); return reg; }
++        static void mhpmevent4(Reg32 r) {  ASM("csrw mhpmevent4, %0" : : "r"(r) :); }
++
++        static Reg64 minstret() { Reg64 reg; ASM("csrr %0, minstret\n\t" : "=r"(reg) : ); return reg; }
++        static Reg32 minstreth() { Reg32 reg; ASM("csrr %0, minstreth\n\t" : "=r"(reg) : ); return reg; }
++
++        static Reg64 mcycle() { Reg64 reg; ASM("csrr %0, mcycle\n\t" : "=r"(reg) : ); return reg; }
++        static Reg32 mcycleh() { Reg32 reg; ASM("csrr %0, mcycleh\n\t" : "=r"(reg) : ); return reg; }
++    };
++
++__END_SYS
++
++#endif
+diff --git a/include/architecture/rv64/rv64_cpu.h b/include/architecture/rv64/rv64_cpu.h
+new file mode 100644
+index 0000000..93cf13b
+--- /dev/null
++++ b/include/architecture/rv64/rv64_cpu.h
+@@ -0,0 +1,568 @@
++// EPOS RISC-V 32 CPU Mediator Declarations
++
++#ifndef __rv32_h
++#define __rv32_h
++
++#include <architecture/cpu.h>
++
++extern "C" { void _int_leave(); }
++
++__BEGIN_SYS
++
++class CPU: protected CPU_Common
++{
++    friend class Init_System; // for CPU::init()
++
++private:
++    static const bool multicore = Traits<System>::multicore;
++    static const bool multitask = Traits<System>::multitask;
++
++public:
++    // CPU Native Data Types
++    using CPU_Common::Reg8;
++    using CPU_Common::Reg16;
++    using CPU_Common::Reg32;
++    using CPU_Common::Reg64;
++    using CPU_Common::Reg;
++    using CPU_Common::Log_Addr;
++    using CPU_Common::Phy_Addr;
++
++    // Status Register ([m|s]status)
++    typedef Reg Status;
++    enum {
++        UIE             = 1 <<  0,      // User Interrupts Enabled
++        SIE             = 1 <<  1,      // Supervisor Interrupts Enabled
++        MIE             = 1 <<  3,      // Machine Interrupts Enabled
++        UPIE            = 1 <<  4,      // User Previous Interrupts Enabled
++        SPIE            = 1 <<  5,      // Supervisor Previous Interrupts Enabled
++        MPIE            = 1 <<  7,      // Machine Previous Interrupts Enabled
++        SPP             = 1 <<  8,      // Supervisor Previous Privilege
++        SPP_U           = 0 <<  8,      // Supervisor Previous Privilege = user
++        SPP_S           = 1 <<  8,      // Supervisor Previous Privilege = supervisor
++        MPP             = 3 << 11,      // Machine Previous Privilege
++        MPP_U           = 0 << 11,      // Machine Previous Privilege = user
++        MPP_S           = 1 << 11,      // Machine Previous Privilege = supervisor
++        MPP_M           = 3 << 11,      // Machine Previous Privilege = machine
++        FS              = 3 << 13,      // FPU Status
++        FS_OFF          = 0 << 13,      // FPU off
++        FS_INIT         = 1 << 13,      // FPU on
++        FS_CLEAN        = 2 << 13,      // FPU registers clean
++        FS_DIRTY        = 3 << 13,      // FPU registers dirty (and must be saved on context switch)
++        XS              = 3 << 15,      // Extension Status
++        XS_OFF          = 0 << 15,      // Extension off
++        XS_INIT         = 1 << 15,      // Extension on
++        XS_CLEAN        = 2 << 15,      // Extension registers clean
++        XS_DIRTY        = 3 << 15,      // Extension registers dirty (and must be saved on context switch)
++        MPRV            = 1 << 17,      // Memory PRiVilege (when set, enables MMU also in machine mode)
++        SUM             = 1 << 18,      // Supervisor User Memory access allowed
++        MXR             = 1 << 19,      // Make eXecutable Readable
++        TVM             = 1 << 20,      // Trap Virtual Memory makes SATP inaccessible in supervisor mode
++        TW              = 1 << 21,      // Timeout Wait for WFI outside machine mode
++        TSR             = 1 << 22,      // Trap SRet in supervisor mode
++        SD              = 1 << 31,      // Status Dirty = (FS | XS)
++    };
++
++    // Interrupt-Enable, Interrupt-Pending and Machine Cause Registers ([m|s]ie, [m|s]ip, and [m|s]cause when interrupt bit is set)
++    enum {
++        SSI             = 1 << 1,       // Supervisor Software Interrupt
++        MSI             = 1 << 3,       // Machine Software Interrupt
++        STI             = 1 << 5,       // Supervisor Timer Interrupt
++        MTI             = 1 << 7,       // Machine Timer Interrupt
++        SEI             = 1 << 9,       // Supervisor External Interrupt
++        MEI             = 1 << 11       // Machine External Interrupt
++    };
++
++    // Exceptions ([m|s]cause with interrupt = 0)
++    static const unsigned int EXCEPTIONS = 16;
++    enum {
++        EXC_IALIGN       = 0,   // Instruction address misaligned
++        EXC_IFAULT       = 1,   // Instruction access fault
++        EXC_IILLEGAL     = 2,   // Illegal instruction
++        EXC_BREAK        = 3,   // Breakpoint
++        EXC_DRALIGN      = 4,   // Load address misaligned
++        EXC_DRFAULT      = 5,   // Load access fault
++        EXC_DWALIGN      = 6,   // Store/AMO address misaligned
++        EXC_DWFAULT      = 7,   // Store/AMO access fault
++        EXC_ENVU         = 8,   // Environment call from U-mode
++        EXC_RES1         = 9,   // Environment call from S-mode
++        EXC_ENVH        = 10,   // reserved
++        EXC_ENVM        = 11,   // Environment call from M-mode
++        EXC_IPF         = 12,   // Instruction page fault
++        EXC_DPF         = 13,   // Data page fault
++        EXC_RES2        = 14,   // reserved
++        EXC_AMOPF       = 15,   // Store/AMO page fault
++    };
++
++    // CPU Context
++    class Context
++    {
++        friend class CPU;       // for Context::push() and Context::pop()
++        friend class IC;        // for Context::push() and Context::pop()
++        friend class Thread;    // for Context::push()
++
++    public:
++        Context() {}
++        // Contexts are loaded with [m|s]ret, which gets pc from [m|s]epc and updates some bits of [m|s]status, that's why _st is initialized with [M|S]PIE and [M|S]PP
++        // Kernel threads are created with usp = 0 and have SPP_S set
++        // Dummy contexts for the first execution of each thread (both kernel and user) are created with exit = 0 and SPIE cleared (no interrupts until the second context is popped)
++        Context(Log_Addr entry, Log_Addr exit): _usp(0), _pc(entry), _st((exit ? MPIE : 0) | MPP_M), _x1(exit) {
++            if(Traits<Build>::hysterically_debugged || Traits<Thread>::trace_idle) {
++                                                                        _x5 =  5;  _x6 =  6;  _x7 =  7;  _x8 =  8;  _x9 =  9;
++                _x10 = 10; _x11 = 11; _x12 = 12; _x13 = 13; _x14 = 14; _x15 = 15; _x16 = 16; _x17 = 17; _x18 = 18; _x19 = 19;
++                _x20 = 20; _x21 = 21; _x22 = 22; _x23 = 23; _x24 = 24; _x25 = 25; _x26 = 26; _x27 = 27; _x28 = 28; _x29 = 29;
++                _x30 = 30; _x31 = 31;
++            }
++        }
++
++        void save() volatile __attribute__ ((naked));
++        void load() const volatile __attribute__ ((naked));
++
++        friend OStream & operator<<(OStream & db, const Context & c) {
++            db << hex
++               << "{sp="   << &c
++               << ",usp="  << c._usp
++               << ",pc="   << c._pc
++               << ",st="   << c._st
++               << ",lr="   << c._x1
++               << ",x5="   << c._x5
++               << ",x6="   << c._x6
++               << ",x7="   << c._x7
++               << ",x8="   << c._x8
++               << ",x9="   << c._x9
++               << ",x10="  << c._x10
++               << ",x11="  << c._x11
++               << ",x12="  << c._x12
++               << ",x13="  << c._x13
++               << ",x14="  << c._x14
++               << ",x15="  << c._x15
++               << ",x16="  << c._x16
++               << ",x17="  << c._x17
++               << ",x18="  << c._x18
++               << ",x19="  << c._x19
++               << ",x20="  << c._x20
++               << ",x21="  << c._x21
++               << ",x22="  << c._x22
++               << ",x23="  << c._x23
++               << ",x24="  << c._x24
++               << ",x25="  << c._x25
++               << ",x26="  << c._x26
++               << ",x27="  << c._x27
++               << ",x28="  << c._x28
++               << ",x29="  << c._x29
++               << ",x30="  << c._x30
++               << ",x31="  << c._x31
++               << "}" << dec;
++            return db;
++        }
++
++    private:
++        static void pop(bool interrupt = false);  // interrupt or context switch?
++        static void push(bool interrupt = false); // interrupt or context switch?
++
++    private:
++        Reg _usp;     // usp (used with multitasking)
++        Reg _pc;      // pc
++        Reg _st;      // [m|s]status
++    //  Reg _x0;      // zero
++        Reg _x1;      // ra, ABI Link Register
++    //  Reg _x2;      // sp, ABI Stack Pointer, saved as this
++    //  Reg _x3;      // gp, ABI Global Pointer, used in EPOS as a temporary
++    //  Reg _x4;      // tp, ABI Thread Pointer, used in EPOS as core id
++        Reg _x5;      // t0
++        Reg _x6;      // t1
++        Reg _x7;      // t2
++        Reg _x8;      // s0
++        Reg _x9;      // s1
++        Reg _x10;     // a0
++        Reg _x11;     // a1
++        Reg _x12;     // a2
++        Reg _x13;     // a3
++        Reg _x14;     // a4
++        Reg _x15;     // a5
++        Reg _x16;     // a6
++        Reg _x17;     // a7
++        Reg _x18;     // s2
++        Reg _x19;     // s3
++        Reg _x20;     // s4
++        Reg _x21;     // s5
++        Reg _x22;     // s6
++        Reg _x23;     // s7
++        Reg _x24;     // s8
++        Reg _x25;     // s9
++        Reg _x26;     // s10
++        Reg _x27;     // s11
++        Reg _x28;     // t3
++        Reg _x29;     // t4
++        Reg _x30;     // t5
++        Reg _x31;     // t6
++    };
++
++    // Interrupt Service Routines
++    typedef void (ISR)();
++
++    // Fault Service Routines (exception handlers)
++    typedef void (FSR)();
++
++public:
++    CPU() {};
++
++    static Log_Addr pc() { Reg r; ASM("auipc %0, 0" : "=r"(r) :); return r; }
++
++    static Reg sp() { Reg r; ASM("mv %0, sp" :  "=r"(r) :); return r; }
++    static void sp(Reg r) {  ASM("mv sp, %0" : : "r"(r) :); }
++
++    static Reg fp() { Reg r; ASM("mv %0, fp" :  "=r"(r) :); return r; }
++    static void fp(Reg r) {  ASM("mv fp, %0" : : "r"(r) :); }
++
++    static Reg ra() { Reg r; ASM("mv %0, ra" :  "=r"(r)); return r; }
++    static void ra(Reg r) {  ASM("mv ra, %0" : : "r"(r) :); }
++
++    static Reg fr() { Reg r; ASM("mv %0, a0" :  "=r"(r)); return r; }
++    static void fr(Reg r) {  ASM("mv a0, %0" : : "r"(r) :); }
++
++    static unsigned int id() { return multitask ? tp() : mhartid(); }
++
++    static unsigned int cores() { return Traits<Build>::CPUS; }
++
++    using CPU_Common::clock;
++    using CPU_Common::min_clock;
++    using CPU_Common::max_clock;
++    using CPU_Common::bus_clock;
++
++    static void int_enable()  { multitask ? sint_enable()  : mint_enable(); }
++    static void int_disable() { multitask ? sint_disable() : mint_disable(); }
++    static bool int_enabled() { return multitask ? (sstatus() & SIE) : (mstatus() & MIE) ; }
++    static bool int_disabled() { return !int_enabled(); }
++
++    static void halt() { ASM("wfi"); }
++
++    static void fpu_save();
++    static void fpu_restore();
++
++    static void switch_context(Context ** o, Context * n) __attribute__ ((naked));
++
++    template<typename T>
++    static T tsl(volatile T & lock) {
++        register T old;
++        register T one = 1;
++        ASM("1: lr.w    %0, (%1)        \n"
++            "   sc.w    t3, %2, (%1)    \n"
++            "   bnez    t3, 1b          \n" : "=&r"(old) : "r"(&lock), "r"(one) : "t3", "cc", "memory");
++        return old;
++    }
++
++    template<typename T>
++    static T finc(volatile T & value) {
++        register T old;
++        ASM("1: lr.w    %0, (%1)        \n"
++            "   addi    %0, %0, 1       \n"
++            "   sc.w    t3, %0, (%1)    \n"
++            "   bnez    t3, 1b          \n" : "=&r"(old) : "r"(&value) : "t3", "cc", "memory");
++        return old - 1;
++    }
++
++    template<typename T>
++    static T fdec(volatile T & value) {
++        register T old;
++        ASM("1: lr.w    %0, (%1)        \n"
++            "   addi    %0, %0, -1      \n"
++            "   sc.w    t3, %0, (%1)    \n"
++            "   bnez    t3, 1b          \n" : "=&r"(old) : "r"(&value) : "t3", "cc", "memory");
++        return old + 1;
++    }
++
++    template <typename T>
++    static T cas(volatile T & value, T compare, T replacement) {
++        register T old;
++        ASM("1: lr.w    %0, (%1)        \n"
++            "   bne     %0, %2, 2f      \n"
++            "   sc.w    t3, %3, (%1)    \n"
++            "   bnez    t3, 1b          \n"
++            "2:                         \n" : "=&r"(old) : "r"(&value), "r"(compare), "r"(replacement) : "t3", "cc", "memory");
++        return old;
++    }
++
++    static void smp_barrier(unsigned long cores = CPU::cores()) { CPU_Common::smp_barrier<&finc>(cores, id()); }
++
++    static void flush_tlb() {         ASM("sfence.vma"    : :           : "memory"); }
++    static void flush_tlb(Reg addr) { ASM("sfence.vma %0" : : "r"(addr) : "memory"); }
++
++    using CPU_Common::htole64;
++    using CPU_Common::htole32;
++    using CPU_Common::htole16;
++    using CPU_Common::letoh64;
++    using CPU_Common::letoh32;
++    using CPU_Common::letoh16;
++
++    using CPU_Common::htobe64;
++    using CPU_Common::htobe32;
++    using CPU_Common::htobe16;
++    using CPU_Common::betoh64;
++    using CPU_Common::betoh32;
++    using CPU_Common::betoh16;
++
++    using CPU_Common::htonl;
++    using CPU_Common::htons;
++    using CPU_Common::ntohl;
++    using CPU_Common::ntohs;
++
++    template<typename ... Tn>
++    static Context * init_stack(Log_Addr usp, Log_Addr sp, void (* exit)(), int (* entry)(Tn ...), Tn ... an) {
++        sp -= sizeof(Context);
++        Context * ctx = new(sp) Context(entry, exit);
++        init_stack_helper(&ctx->_x10, an ...); // x10 is a0
++        sp -= sizeof(Context);
++        ctx = new(sp) Context(&_int_leave, 0); // this context will be popped by switch() to reach _int_leave(), which will activate the thread's context
++        ctx->_x10 = 0; // zero fr() for the pop(true) issued by _int_leave()
++        return ctx;
++    }
++
++public:
++    // RISC-V 32 specifics
++    static Reg status()       { return multitask ? sstatus() : mstatus(); }
++    static void status(Status st) { multitask ? sstatus(st) : mstatus(st); }
++
++    static Reg tp() { Reg r; ASM("mv %0, x4" : "=r"(r) :); return r; }
++    static void tp(Reg r) {  ASM("mv x4, %0" : : "r"(r) :); }
++
++    static Reg a0() { Reg r; ASM("mv %0, a0" :  "=r"(r)); return r; }
++    static void a0(Reg r) {  ASM("mv a0, %0" : : "r"(r) :); }
++
++    static Reg a1() { Reg r; ASM("mv %0, a1" :  "=r"(r)); return r; }
++    static void a1(Reg r) {  ASM("mv a1, %0" : : "r"(r) :); }
++
++    static void ecall() { ASM("ecall"); }
++    static void iret() { mret(); }
++
++    // Machine mode
++    static void mint_enable()  { ASM("csrsi mstatus, %0" : : "i"(MIE) : "cc"); }
++    static void mint_disable() { ASM("csrci mstatus, %0" : : "i"(MIE) : "cc"); }
++
++    static Reg mhartid() { Reg r; ASM("csrr %0, mhartid" : "=r"(r) : : "memory", "cc"); return r & 0x3; }
++
++    static void mscratch(Reg r)   { ASM("csrw mscratch, %0" : : "r"(r) : "cc"); }
++    static Reg  mscratch() { Reg r; ASM("csrr %0, mscratch" :  "=r"(r) : : ); return r; }
++
++    static void mstatus(Reg r)   { ASM("csrw mstatus, %0" : : "r"(r) : "cc"); }
++    static Reg  mstatus() { Reg r; ASM("csrr %0, mstatus" :  "=r"(r) : : ); return r; }
++    static void mstatusc(Reg r)  { ASM("csrc mstatus, %0" : : "r"(r) : "cc"); }
++    static void mstatuss(Reg r)  { ASM("csrs mstatus, %0" : : "r"(r) : "cc"); }
++
++    static void mie(Reg r)   { ASM("csrw mie, %0" : : "r"(r) : "cc"); }
++    static void miec(Reg r)  { ASM("csrc mie, %0" : : "r"(r) : "cc"); }
++    static void mies(Reg r)  { ASM("csrs mie, %0" : : "r"(r) : "cc"); }
++    static Reg  mie() { Reg r; ASM("csrr %0, mie" :  "=r"(r) : : ); return r; }
++
++    static void mip(Reg r)   { ASM("csrw mip, %0" : : "r"(r) : "cc"); }
++    static void mipc(Reg r)  { ASM("csrc mip, %0" : : "r"(r) : "cc"); }
++    static void mips(Reg r)  { ASM("csrs mip, %0" : : "r"(r) : "cc"); }
++    static Reg  mip() { Reg r; ASM("csrr %0, mip" :  "=r"(r) : : ); return r; }
++
++    static Reg mcause() { Reg r; ASM("csrr %0, mcause" : "=r"(r) : : ); return r; }
++    static Reg mtval()  { Reg r; ASM("csrr %0, mtval" :  "=r"(r) : : ); return r; }
++
++    static void mepc(Reg r)   { ASM("csrw mepc, %0" : : "r"(r) : "cc"); }
++    static Reg  mepc() { Reg r; ASM("csrr %0, mepc" :  "=r"(r) : : ); return r; }
++
++    static void mret() { ASM("mret"); }
++
++    static void mideleg(Reg value) { ASM("csrw mideleg, %0" : : "r"(value) : "cc"); }
++    static void medeleg(Reg value) { ASM("csrw medeleg, %0" : : "r"(value) : "cc"); }
++
++    // Supervisor mode
++    static void sint_enable()  { ASM("csrsi sstatus, %0" : : "i"(SIE) : "cc"); }
++    static void sint_disable() { ASM("csrci sstatus, %0" : : "i"(SIE) : "cc"); }
++
++    static void sscratch(Reg r)   { ASM("csrw sscratch, %0" : : "r"(r) : "cc"); }
++    static Reg  sscratch() { Reg r; ASM("csrr %0, sscratch" :  "=r"(r) : : ); return r; }
++
++    static void sstatus(Reg r)   { ASM("csrw sstatus, %0" : : "r"(r) : "cc"); }
++    static Reg  sstatus() { Reg r; ASM("csrr %0, sstatus" :  "=r"(r) : : ); return r; }
++    static void sstatusc(Reg r)  { ASM("csrc sstatus, %0" : : "r"(r) : "cc"); }
++    static void sstatuss(Reg r)  { ASM("csrs sstatus, %0" : : "r"(r) : "cc"); }
++
++    static void sie(Reg r)   { ASM("csrw sie, %0" : : "r"(r) : "cc"); }
++    static void siec(Reg r)  { ASM("csrc sie, %0" : : "r"(r) : "cc"); }
++    static void sies(Reg r)  { ASM("csrs sie, %0" : : "r"(r) : "cc"); }
++    static Reg  sie() { Reg r; ASM("csrr %0, sie" :  "=r"(r) : : ); return r; }
++
++    static void sip(Reg r)   { ASM("csrw sip, %0" : : "r"(r) : "cc"); }
++    static void sipc(Reg r)  { ASM("csrc sip, %0" : : "r"(r) : "cc"); }
++    static void sips(Reg r)  { ASM("csrs sip, %0" : : "r"(r) : "cc"); }
++    static Reg  sip() { Reg r; ASM("csrr %0, sip" :  "=r"(r) : : ); return r; }
++
++    static Reg scause() { Reg r; ASM("csrr %0, scause" : "=r"(r) : : ); return r; }
++    static Reg stval()  { Reg r; ASM("csrr %0, stval" :  "=r"(r) : : ); return r; }
++
++    static void sepc(Reg r)   { ASM("csrw sepc, %0" : : "r"(r) : "cc"); }
++    static Reg  sepc() { Reg r; ASM("csrr %0, sepc" :  "=r"(r) : : ); return r; }
++
++    static void sret() { ASM("sret"); }
++
++    static void satp(Reg r) { ASM("csrw satp, %0" : : "r"(r) : "cc"); }
++    static Reg  satp() { Reg r; ASM("csrr %0, satp" :  "=r"(r) : : ); return r; }
++
++private:
++    template<typename Head, typename ... Tail>
++    static void init_stack_helper(Log_Addr sp, Head head, Tail ... tail) {
++        *static_cast<Head *>(sp) = head;
++        init_stack_helper(sp + sizeof(Head), tail ...);
++    }
++    static void init_stack_helper(Log_Addr sp) {}
++
++    static void init();
++
++private:
++    static unsigned int _cpu_clock;
++    static unsigned int _bus_clock;
++};
++
++inline void CPU::Context::push(bool interrupt)
++{
++    ASM("       addi    sp, sp, %0              \n" : : "i"(-sizeof(Context))); // adjust SP for the pushes below
++
++if(interrupt) {
++  if(multitask) {
++    ASM("       csrr    x3, sepc                \n"
++        "       sw      x3,     4(sp)           \n");   // push SEPC as PC on interrupts
++  } else {
++    ASM("       csrr    x3, mepc                \n"
++        "       sw      x3,     4(sp)           \n");   // push MEPC as PC on interrupts
++  }
++} else {
++    ASM("       sw      x1,     4(sp)           \n");   // push RA as PC on context switches
++}
++
++if(!interrupt && multitask) {
++    ASM("       li      x3, 1 << 8              \n"
++        "       csrs    sstatus, x3             \n");   // set SPP_S inside the kernel; the push(true) on IC::entry() has already saved the correct value to eventually return to the application
++}
++
++if(multitask) {
++    ASM("       csrr    x3, sstatus             \n");
++} else {
++    ASM("       csrr    x3, mstatus             \n");
++}
++    ASM("       sw      x3,     8(sp)           \n"     // push ST
++        "       sw      x1,    12(sp)           \n"     // push RA
++        "       sw      x5,    16(sp)           \n"     // push x5-x31
++        "       sw      x6,    20(sp)           \n"
++        "       sw      x7,    24(sp)           \n"
++        "       sw      x8,    28(sp)           \n"
++        "       sw      x9,    32(sp)           \n"
++        "       sw      x10,   36(sp)           \n"
++        "       sw      x11,   40(sp)           \n"
++        "       sw      x12,   44(sp)           \n"
++        "       sw      x13,   48(sp)           \n"
++        "       sw      x14,   52(sp)           \n"
++        "       sw      x15,   56(sp)           \n"
++        "       sw      x16,   60(sp)           \n"
++        "       sw      x17,   64(sp)           \n"
++        "       sw      x18,   68(sp)           \n"
++        "       sw      x19,   72(sp)           \n"
++        "       sw      x20,   76(sp)           \n"
++        "       sw      x21,   80(sp)           \n"
++        "       sw      x22,   84(sp)           \n"
++        "       sw      x23,   88(sp)           \n"
++        "       sw      x24,   92(sp)           \n"
++        "       sw      x25,   96(sp)           \n"
++        "       sw      x26,  100(sp)           \n"
++        "       sw      x27,  104(sp)           \n"
++        "       sw      x28,  108(sp)           \n"
++        "       sw      x29,  112(sp)           \n"
++        "       sw      x30,  116(sp)           \n"
++        "       sw      x31,  120(sp)           \n");
++}
++
++inline void CPU::Context::pop(bool interrupt)
++{
++if(multitask) {
++    ASM("       lw       x3, 0(sp)              \n"     // pop USP
++        "       csrw     sscratch, x3           \n");   // sscratch = USP (sscratch holds ksp in user-land and USP in kernel; USP = 0 for kernel threads)
++}
++
++    ASM("       lw       x3, 4(sp)              \n");   // pop PC
++if(interrupt) {
++    ASM("       add      x3, x3, a0             \n");   // a0 is set by exception handlers to adjust [M|S]EPC to point to the next instruction if needed
++}
++if(multitask) {
++    ASM("       csrw     sepc, x3               \n");   // SEPC = PC
++} else {
++    ASM("       csrw     mepc, x3               \n");   // MEPC = PC
++}
++
++    ASM("       lw       x3,    8(sp)           \n");   // pop ST into x3 (tmp)
++if(!interrupt & !multitask) {
++    ASM("       li      a0, 3 << 11             \n"     // use a0 as a second TMP, since it will be restored later
++        "       or      x3, x3, a0              \n");   // mstatus.MPP is automatically cleared on mret, so we reset it to MPP_M here
++}
++
++    ASM("       lw       x1,   12(sp)           \n"     // pop RA
++        "       lw       x5,   16(sp)           \n"     // pop x5-x31
++        "       lw       x6,   20(sp)           \n"
++        "       lw       x7,   24(sp)           \n"
++        "       lw       x8,   28(sp)           \n"
++        "       lw       x9,   32(sp)           \n"
++        "       lw      x10,   36(sp)           \n"
++        "       lw      x11,   40(sp)           \n"
++        "       lw      x12,   44(sp)           \n"
++        "       lw      x13,   48(sp)           \n"
++        "       lw      x14,   52(sp)           \n"
++        "       lw      x15,   56(sp)           \n"
++        "       lw      x16,   60(sp)           \n"
++        "       lw      x17,   64(sp)           \n"
++        "       lw      x18,   68(sp)           \n"
++        "       lw      x19,   72(sp)           \n"
++        "       lw      x20,   76(sp)           \n"
++        "       lw      x21,   80(sp)           \n"
++        "       lw      x22,   84(sp)           \n"
++        "       lw      x23,   88(sp)           \n"
++        "       lw      x24,   92(sp)           \n"
++        "       lw      x25,   96(sp)           \n"
++        "       lw      x26,  100(sp)           \n"
++        "       lw      x27,  104(sp)           \n"
++        "       lw      x28,  108(sp)           \n"
++        "       lw      x29,  112(sp)           \n"
++        "       lw      x30,  116(sp)           \n"
++        "       lw      x31,  120(sp)           \n"
++        "       addi    sp, sp, %0              \n" : : "i"(sizeof(Context))); // complete the pops above by adjusting SP
++
++if(multitask) {
++    ASM("       csrw    sstatus, x3             \n");   // sstatus = ST
++} else {
++    ASM("       csrw    mstatus, x3             \n");   // mstatus = ST
++}
++
++if(multitask && interrupt) {
++    // swap(ksp, usp)
++    ASM("       andi    x3, x3, 1 << 8          \n"
++        "       bne     x3, zero, 1f            \n"
++        "       csrr    x3, sscratch            \n"
++        "       csrw    sscratch, sp            \n"
++        "       mv      sp, x3                  \n"
++        "1:                                     \n");
++}
++}
++
++inline CPU::Reg64 htole64(CPU::Reg64 v) { return CPU::htole64(v); }
++inline CPU::Reg32 htole32(CPU::Reg32 v) { return CPU::htole32(v); }
++inline CPU::Reg16 htole16(CPU::Reg16 v) { return CPU::htole16(v); }
++inline CPU::Reg64 letoh64(CPU::Reg64 v) { return CPU::letoh64(v); }
++inline CPU::Reg32 letoh32(CPU::Reg32 v) { return CPU::letoh32(v); }
++inline CPU::Reg16 letoh16(CPU::Reg16 v) { return CPU::letoh16(v); }
++
++inline CPU::Reg64 htobe64(CPU::Reg64 v) { return CPU::htobe64(v); }
++inline CPU::Reg32 htobe32(CPU::Reg32 v) { return CPU::htobe32(v); }
++inline CPU::Reg16 htobe16(CPU::Reg16 v) { return CPU::htobe16(v); }
++inline CPU::Reg64 betoh64(CPU::Reg64 v) { return CPU::betoh64(v); }
++inline CPU::Reg32 betoh32(CPU::Reg32 v) { return CPU::betoh32(v); }
++inline CPU::Reg16 betoh16(CPU::Reg16 v) { return CPU::betoh16(v); }
++
++inline CPU::Reg32 htonl(CPU::Reg32 v)   { return CPU::htonl(v); }
++inline CPU::Reg16 htons(CPU::Reg16 v)   { return CPU::htons(v); }
++inline CPU::Reg32 ntohl(CPU::Reg32 v)   { return CPU::ntohl(v); }
++inline CPU::Reg16 ntohs(CPU::Reg16 v)   { return CPU::ntohs(v); }
++
++__END_SYS
++
++#endif
+diff --git a/include/architecture/rv64/rv64_mmu.h b/include/architecture/rv64/rv64_mmu.h
+new file mode 100644
+index 0000000..6d7721c
+--- /dev/null
++++ b/include/architecture/rv64/rv64_mmu.h
+@@ -0,0 +1,445 @@
++// EPOS RISC-V 64 MMU Mediator Declarations
++
++#ifndef __rv64_mmu_h
++#define __rv64_mmu_h
++
++#include <architecture/mmu.h>
++#include <system/memory_map.h>
++
++__BEGIN_SYS
++
++class RV64S_MMU: public MMU_Common<10, 10, 12>
++{
++    friend class CPU;
++    friend class Setup;
++
++private:
++    typedef Grouping_List<Frame> List;
++
++    static const bool colorful = Traits<MMU>::colorful;
++    static const unsigned int COLORS = Traits<MMU>::COLORS;
++    static const unsigned int RAM_BASE = Memory_Map::RAM_BASE;
++    static const unsigned int APP_LOW = Memory_Map::APP_LOW;
++    static const unsigned int PHY_MEM = Memory_Map::PHY_MEM;
++    static const unsigned int SYS = Memory_Map::SYS;
++    static const unsigned int IO = Memory_Map::IO;
++
++public:
++    // Page Flags
++    class Page_Flags
++    {
++    public:
++        enum {
++            V    = 1 << 0, // Valid
++            R    = 1 << 1, // Readable
++            W    = 1 << 2, // Writable
++            X    = 1 << 3, // Executable
++            U    = 1 << 4, // User accessible
++            G    = 1 << 5, // Global (mapped in multiple PTs)
++            A    = 1 << 6, // Accessed
++            D    = 1 << 7, // Dirty
++            CT   = 1 << 8, // Contiguous (reserved for use by supervisor RSW)
++            MIO  = 1 << 9, // I/O (reserved for use by supervisor RSW)
++            APP  = (V | R | W | X | U),
++            APPC = (V | R | X | U),
++            APPD = (V | R | W | U),
++            SYS  = (V | R | W | X),
++            IO   = (SYS | MIO),
++            DMA  = (SYS | CT),
++            MASK = (1 << 10) - 1
++        };
++
++    public:
++        Page_Flags() {}
++        Page_Flags(unsigned int f) : _flags(f) {}
++        Page_Flags(Flags f) : _flags(V |
++                                     ((f & Flags::RD)  ? R  : 0) |
++                                     ((f & Flags::RW)  ? W  : 0) |
++                                     ((f & Flags::EX)  ? X  : 0) |
++                                     ((f & Flags::USR) ? U  : 0) |
++                                     ((f & Flags::CWT) ? 0  : 0) |
++                                     ((f & Flags::CD)  ? 0  : 0) |
++                                     ((f & Flags::CT)  ? CT : 0) |
++                                     ((f & Flags::IO)  ? IO : 0) ) {}
++
++        operator unsigned int() const { return _flags; }
++
++        friend Debug & operator<<(Debug & db, const Page_Flags & f) { db << hex << f._flags; return db; }
++
++    private:
++        unsigned int _flags;
++    };
++
++    // Page_Table
++    class Page_Table
++    {
++    public:
++        Page_Table() {}
++
++        PT_Entry & operator[](unsigned int i) { return _entry[i]; }
++        Page_Table & log() { return *static_cast<Page_Table *>(phy2log(this)); }
++
++        void map(int from, int to, Page_Flags flags, Color color) {
++            Phy_Addr * addr = alloc(to - from, color);
++            if(addr)
++                remap(addr, from, to, flags);
++            else
++                for( ; from < to; from++) {
++                    Log_Addr * pte = phy2log(&_entry[from]);
++                    *pte = phy2pte(alloc(1, color), flags);
++                }
++        }
++
++        void map_contiguous(int from, int to, Page_Flags flags, Color color) {
++            remap(alloc(to - from, color), from, to, flags);
++        }
++
++        void remap(Phy_Addr addr, int from, int to, Page_Flags flags) {
++            addr = align_page(addr);
++            for( ; from < to; from++) {
++                Log_Addr * pte = phy2log(&_entry[from]);
++                *pte = phy2pte(addr, flags);
++                addr += sizeof(Page);
++            }
++        }
++
++        void unmap(int from, int to) {
++            for( ; from < to; from++) {
++                free(_entry[from]);
++                Log_Addr * pte = phy2log(&_entry[from]);
++                *pte = 0;
++            }
++        }
++
++        friend OStream & operator<<(OStream & os, Page_Table & pt) {
++            os << "{\n";
++            int brk = 0;
++            for(unsigned int i = 0; i < PT_ENTRIES; i++)
++                if(pt[i]) {
++                    os << "[" << i << "]=" << pte2phy(pt[i]) << "  ";
++                    if(!(++brk % 4))
++                        os << "\n";
++                }
++            os << "\n}";
++            return os;
++        }
++
++    private:
++        PT_Entry _entry[PT_ENTRIES]; // the Phy_Addr in each entry passed through phy2pte()
++    };
++
++    // Chunk (for Segment)
++    class Chunk
++    {
++    public:
++        Chunk() {}
++
++        Chunk(unsigned int bytes, Flags flags, Color color = WHITE)
++        : _from(0), _to(pages(bytes)), _pts(page_tables(_to - _from)), _flags(Page_Flags(flags)), _pt(calloc(_pts, WHITE)) {
++            if(_flags & Page_Flags::CT)
++                _pt->map_contiguous(_from, _to, _flags, color);
++            else
++                _pt->map(_from, _to, _flags, color);
++        }
++
++        Chunk(Phy_Addr phy_addr, unsigned int bytes, Flags flags)
++        : _from(0), _to(pages(bytes)), _pts(page_tables(_to - _from)), _flags(Page_Flags(flags)), _pt(calloc(_pts, WHITE)) {
++            _pt->remap(phy_addr, _from, _to, flags);
++        }
++
++        Chunk(Phy_Addr pt, unsigned int from, unsigned int to, Flags flags)
++        : _from(from), _to(to), _pts(page_tables(_to - _from)), _flags(flags), _pt(pt) {}
++
++        ~Chunk() {
++            if(!(_flags & Page_Flags::IO)) {
++                if(_flags & Page_Flags::CT)
++                    free((*_pt)[_from], _to - _from);
++                else
++                    for( ; _from < _to; _from++)
++                        free((*_pt)[_from]);
++            }
++            free(_pt, _pts);
++        }
++
++        unsigned int pts() const { return _pts; }
++        Page_Flags flags() const { return _flags; }
++        Page_Table * pt() const { return _pt; }
++        unsigned int size() const { return (_to - _from) * sizeof(Page); }
++
++        Phy_Addr phy_address() const {
++            return (_flags & Page_Flags::CT) ? Phy_Addr(indexes((*_pt)[_from])) : Phy_Addr(false);
++        }
++
++        int resize(unsigned int amount) {
++            if(_flags & Page_Flags::CT)
++                return 0;
++
++            unsigned int pgs = pages(amount);
++
++            Color color = colorful ? phy2color(_pt) : WHITE;
++
++            unsigned int free_pgs = _pts * PT_ENTRIES - _to;
++            if(free_pgs < pgs) { // resize _pt
++                unsigned int pts = _pts + page_tables(pgs - free_pgs);
++                Page_Table * pt = calloc(pts, color);
++                memcpy(phy2log(pt), phy2log(_pt), _pts * sizeof(Page));
++                free(_pt, _pts);
++                _pt = pt;
++                _pts = pts;
++            }
++
++            _pt->map(_to, _to + pgs, _flags, color);
++            _to += pgs;
++
++            return pgs * sizeof(Page);
++        }
++
++    private:
++        unsigned int _from;
++        unsigned int _to;
++        unsigned int _pts;
++        Page_Flags _flags;
++        Page_Table * _pt; // this is a physical address
++    };
++
++    // Page Directory
++    typedef Page_Table Page_Directory;
++
++    // Directory (for Address_Space)
++    class Directory
++    {
++    public:
++        Directory() : _pd(calloc(1, WHITE)), _free(true) {
++            for(unsigned int i = directory(IO); i < directory(APP_LOW); i++)
++                (*_pd)[i] = (*_master)[i];
++            
++            for(unsigned int i = directory(SYS); i < PD_ENTRIES; i++)
++                (*_pd)[i] = (*_master)[i];
++        }
++
++        Directory(Page_Directory * pd) : _pd(pd), _free(false) {}
++
++        ~Directory() { if(_free) free(_pd); }
++
++        Phy_Addr pd() const { return _pd; }
++
++        void activate() const { RV64S_MMU::pd(_pd); }
++
++        Log_Addr attach(const Chunk & chunk, unsigned int from = directory(APP_LOW)) {
++            for(unsigned int i = from; i < PD_ENTRIES; i++)
++                if(attach(i, chunk.pt(), chunk.pts(), chunk.flags()))
++                    return i << DIRECTORY_SHIFT;
++            return Log_Addr(false);
++        }
++
++        Log_Addr attach(const Chunk & chunk, Log_Addr addr) {
++            unsigned int from = directory(addr);
++            if(attach(from, chunk.pt(), chunk.pts(), chunk.flags()))
++                return from << DIRECTORY_SHIFT;
++            return Log_Addr(false);
++        }
++
++        void detach(const Chunk & chunk) {
++            for(unsigned int i = 0; i < PD_ENTRIES; i++) {
++                if(indexes(pte2phy((*_pd)[i])) == indexes(chunk.pt())) {
++                    detach(i, chunk.pt(), chunk.pts());
++                    return;
++                }
++            }
++            db<MMU>(WRN) << "MMU::Directory::detach(pt=" << chunk.pt() << ") failed!" << endl;
++        }
++
++        void detach(const Chunk & chunk, Log_Addr addr) {
++            unsigned int from = directory(addr);
++            if(indexes(pte2phy((*_pd)[from])) != indexes(chunk.pt())) {
++                db<MMU>(WRN) << "MMU::Directory::detach(pt=" << chunk.pt() << ",addr=" << addr << ") failed!" << endl;
++                return;
++            }
++            detach(from, chunk.pt(), chunk.pts());
++        }
++
++        Phy_Addr physical(Log_Addr addr) {
++            PD_Entry pde = (*_pd)[directory(addr)];
++            Page_Table * pt = static_cast<Page_Table *>(pde2phy(pde));
++            PT_Entry pte = pt->log()[page(addr)];
++            return pte | offset(addr);
++        }
++
++    private:
++        bool attach(unsigned int from, const Page_Table * pt, unsigned int n, Page_Flags flags) {
++            for(unsigned int i = from; i < from + n; i++)
++                if(_pd->log()[i])
++                    return false;
++            for(unsigned int i = from; i < from + n; i++, pt++)
++                _pd->log()[i] = phy2pde(Phy_Addr(pt));
++            return true;
++        }
++
++        void detach(unsigned int from, const Page_Table * pt, unsigned int n) {
++            for(unsigned int i = from; i < from + n; i++) {
++                (*_pd)[i] = 0;
++                flush_tlb(i << DIRECTORY_SHIFT);
++            }
++        }
++
++    private:
++        Page_Directory * _pd;  // this is a physical address, but operator*() returns a logical address
++        bool _free;
++    };
++
++    // DMA_Buffer
++    class DMA_Buffer: public Chunk
++    {
++    public:
++        DMA_Buffer(unsigned int s) : Chunk(s, Page_Flags::DMA) {
++            Directory dir(current());
++            _log_addr = dir.attach(*this);
++            db<MMU>(TRC) << "MMU::DMA_Buffer() => " << *this << endl;
++        }
++
++        DMA_Buffer(unsigned int s, Log_Addr d): Chunk(s, Page_Flags::DMA) {
++            Directory dir(current());
++            _log_addr = dir.attach(*this);
++            memcpy(_log_addr, d, s);
++            db<MMU>(TRC) << "MMU::DMA_Buffer(phy=" << *this << " <= " << d << endl;
++        }
++
++        Log_Addr log_address() const { return _log_addr; }
++
++        friend OStream & operator<<(OStream & os, const DMA_Buffer & b) {
++            os << "{phy=" << b.phy_address() << ",log=" << b.log_address() << ",size=" << b.size() << ",flags=" << b.flags() << "}";
++            return os;
++        }
++
++    private:
++        Log_Addr _log_addr;
++    };
++
++    // Class Translation performs manual logical to physical address translations for debugging purposes only
++    class Translation
++    {
++    public:
++        Translation(Log_Addr addr, bool pt = false, Page_Directory * pd = 0): _addr(addr), _show_pt(pt), _pd(pd) {}
++
++        friend OStream & operator<<(OStream & os, const Translation & t) {
++            Page_Directory * pd = t._pd ? t._pd : current();
++            PD_Entry pde = pd->log()[directory(t._addr)];
++            Page_Table * pt = static_cast<Page_Table *>(pde2phy(pde));
++            PT_Entry pte = pt->log()[page(t._addr)];
++
++            os << "{addr=" << static_cast<void *>(t._addr) << ",pd=" << pd << ",pd[" << directory(t._addr) << "]=" << pde << ",pt=" << pt;
++            if(t._show_pt)
++                os << "=>" << pt->log();
++            os << ",pt[" << page(t._addr) << "]=" << pte << ",f=" << pte2phy(pte) << ",*addr=" << hex << *static_cast<unsigned int *>(t._addr) << "}";
++            return os;
++        }
++
++    private:
++        Log_Addr _addr;
++        bool _show_pt;
++        Page_Directory * _pd;
++    };
++
++public:
++    RV64S_MMU() {}
++
++    static Phy_Addr alloc(unsigned int frames = 1, Color color = WHITE) {
++        Phy_Addr phy(false);
++
++        if(frames) {
++            List::Element * e = _free[color].search_decrementing(frames);
++            if(e) {
++                phy = e->object() + e->size();
++                db<MMU>(TRC) << "MMU::alloc(frames=" << frames << ",color=" << color << ") => " << phy << endl;
++            } else
++                if(colorful)
++                    db<MMU>(INF) << "MMU::alloc(frames=" << frames << ",color=" << color << ") => failed!" << endl;
++                else
++                    db<MMU>(WRN) << "MMU::alloc(frames=" << frames << ",color=" << color << ") => failed!" << endl;
++        }
++
++        return phy;
++    }
++
++    static Phy_Addr calloc(unsigned int frames = 1, Color color = WHITE) {
++        Phy_Addr phy = alloc(frames, color);
++        memset(phy2log(phy), 0, sizeof(Frame) * frames);
++        return phy;
++    }
++
++    static void free(Phy_Addr frame, int n = 1) {
++        // Clean up MMU flags in frame address
++        frame = indexes(frame);
++        Color color = colorful ? phy2color(frame) : WHITE;
++
++        db<MMU>(TRC) << "MMU::free(frame=" << frame << ",color=" << color << ",n=" << n << ")" << endl;
++
++        if(frame && n) {
++            List::Element * e = new (phy2log(frame)) List::Element(frame, n);
++            List::Element * m1, * m2;
++            _free[color].insert_merging(e, &m1, &m2);
++        }
++    }
++
++    static void white_free(Phy_Addr frame, int n) {
++        // Clean up MMU flags in frame address
++        frame = indexes(frame);
++
++        db<MMU>(TRC) << "MMU::free(frame=" << frame << ",color=" << WHITE << ",n=" << n << ")" << endl;
++
++        if(frame && n) {
++            List::Element * e = new (phy2log(frame)) List::Element(frame, n);
++            List::Element * m1, * m2;
++            _free[WHITE].insert_merging(e, &m1, &m2);
++        }
++    }
++
++    static unsigned int allocable(Color color = WHITE) { return _free[color].head() ? _free[color].head()->size() : 0; }
++
++    static Page_Directory * volatile current() { return static_cast<Page_Directory * volatile>(pd()); }
++
++    static Phy_Addr physical(Log_Addr addr) {
++        Page_Directory * pd = current();
++        Page_Table * pt = pd->log()[directory(addr)];
++        return pt->log()[page(addr)] | offset(addr);
++    }
++
++    static PT_Entry phy2pte(Phy_Addr frame, Page_Flags flags) { return (frame >> 2) | flags; }
++    static Phy_Addr pte2phy(PT_Entry entry) { return (entry & ~Page_Flags::MASK) << 2; }
++    static PD_Entry phy2pde(Phy_Addr frame) { return (frame >> 2) | Page_Flags::V; }
++    static Phy_Addr pde2phy(PD_Entry entry) { return (entry & ~Page_Flags::MASK) << 2; }
++
++    static Log_Addr phy2log(Phy_Addr phy) { return Log_Addr((RAM_BASE == PHY_MEM) ? phy : (RAM_BASE > PHY_MEM) ? phy - (RAM_BASE - PHY_MEM) : phy + (PHY_MEM - RAM_BASE)); }
++    static Phy_Addr log2phy(Log_Addr log) { return Phy_Addr((RAM_BASE == PHY_MEM) ? log : (RAM_BASE > PHY_MEM) ? log + (RAM_BASE - PHY_MEM) : log - (PHY_MEM - RAM_BASE)); }
++
++    static Color phy2color(Phy_Addr phy) { return static_cast<Color>(colorful ? ((phy >> PAGE_SHIFT) & 0x7f) % COLORS : WHITE); } // TODO: what is 0x7f
++
++    static Color log2color(Log_Addr log) {
++        if(colorful) {
++            Page_Directory * pd = current();
++            Page_Table * pt = pd->log()[directory(log)];
++            Phy_Addr phy = pt->log()[page(log)] | offset(log);
++            return static_cast<Color>(((phy >> PAGE_SHIFT) & 0x7f) % COLORS);
++        } else
++            return WHITE;
++    }
++
++private:
++    static Phy_Addr pd() { return CPU::satp() << 12; }
++    static void pd(Phy_Addr pd) { CPU::satp((1 << 31) | (pd >> 12)); }
++
++    static void flush_tlb() { CPU::flush_tlb(); }
++    static void flush_tlb(Log_Addr addr) { CPU::flush_tlb(addr); }
++
++    static void init();
++
++private:
++    static List _free[colorful * COLORS + 1]; // +1 for WHITE
++    static Page_Directory * _master;
++};
++
++class MMU: public IF<Traits<System>::multitask, RV64S_MMU, No_MMU>::Result {};
++
++__END_SYS
++
++#endif
+diff --git a/include/architecture/rv64/rv64_traits.h b/include/architecture/rv64/rv64_traits.h
+new file mode 100644
+index 0000000..7fba12a
+--- /dev/null
++++ b/include/architecture/rv64/rv64_traits.h
+@@ -0,0 +1,37 @@
++// EPOS RISC-V 32 Architecture Metainfo
++#ifndef __rv32_traits_h
++#define __rv32_traits_h
++
++#include <system/config.h>
++
++__BEGIN_SYS
++
++template<> struct Traits<CPU>: public Traits<Build>
++{
++    enum {LITTLE, BIG};
++    static const unsigned int ENDIANESS         = LITTLE;
++    static const unsigned int WORD_SIZE         = 64;
++    static const unsigned int CLOCK             = 50000000;
++    static const bool unaligned_memory_access   = false;
++};
++
++template<> struct Traits<MMU>: public Traits<Build>
++{
++    static const bool colorful = false;
++    static const unsigned int COLORS = 1;
++};
++
++template<> struct Traits<FPU>: public Traits<Build>
++{
++    static const bool enabled = false;
++    static const bool user_save = true;
++};
++
++template<> struct Traits<TSC>: public Traits<Build>
++{
++    static const bool enabled = true;
++};
++
++__END_SYS
++
++#endif
+diff --git a/include/architecture/rv64/rv64_tsc.h b/include/architecture/rv64/rv64_tsc.h
+new file mode 100644
+index 0000000..624a8b4
+--- /dev/null
++++ b/include/architecture/rv64/rv64_tsc.h
+@@ -0,0 +1,48 @@
++// EPOS RISC-V 32 Time-Stamp Counter Mediator Declarations
++
++#ifndef __rv32_tsc_h
++#define __rv32_tsc_h
++
++#include <architecture/cpu.h>
++#include <architecture/tsc.h>
++#include <system/memory_map.h>
++
++__BEGIN_SYS
++
++class TSC: private TSC_Common
++{
++    friend class CPU;
++    friend class IC;
++
++private:
++    static const unsigned int CLOCK = Traits<Timer>::CLOCK;
++    static const unsigned int ACCURACY = 40000; // this is actually unknown at the moment
++
++    // Registers offsets from CLINT_BASE
++    enum {               // Description
++        MTIME  = 0xbff8, // Counter (lower 32 bits)
++        MTIMEH = 0xbffc  // Counter (upper 32 bits)
++    };
++
++public:
++    using TSC_Common::Time_Stamp;
++
++    static const unsigned int FREQUENCY = CLOCK;
++
++public:
++    TSC() {}
++
++    static Hertz frequency() { return CLOCK; }
++    static PPB accuracy() { return ACCURACY; }
++
++    static Time_Stamp time_stamp() { return (CPU::Reg64(reg(MTIMEH)) << 32) | reg(MTIME); }
++
++private:
++    static void init() {}
++
++    static volatile CPU::Reg32 & reg(unsigned int o) { return reinterpret_cast<volatile CPU::Reg32 *>(Memory_Map::CLINT_BASE)[o / sizeof(CPU::Reg32)]; }
++};
++
++__END_SYS
++
++#endif
+diff --git a/include/machine/riscv/riscv_machine.h b/include/machine/riscv/riscv_machine.h
+index 33ae26a..c132641 100644
+--- a/include/machine/riscv/riscv_machine.h
++++ b/include/machine/riscv/riscv_machine.h
+@@ -35,11 +35,7 @@ public:
+         if(Traits<System>::reboot) {
+             db<Machine>(WRN) << "Machine::reboot()" << endl;
+ 
+-#ifdef __sifive_e__
+             CPU::Reg * reset = reinterpret_cast<CPU::Reg *>(Memory_Map::AON_BASE);
+-#else
+-            CPU::Reg * reset = reinterpret_cast<CPU::Reg *>(Memory_Map::TEST_BASE);
+-#endif
+             reset[0] = 0x5555;
+ 
+             while(true);
+@@ -52,11 +48,7 @@ public:
+     {
+         db<Machine>(WRN) << "Machine::poweroff()" << endl;
+ 
+-#ifdef __sifive_e__
+         CPU::Reg * reset = reinterpret_cast<CPU::Reg *>(Memory_Map::AON_BASE);
+-#else
+-        CPU::Reg * reset = reinterpret_cast<CPU::Reg *>(Memory_Map::TEST_BASE);
+-#endif
+         reset[0] = 0x5555;
+ 
+         while(true);
+diff --git a/include/machine/riscv/riscv_uart.h b/include/machine/riscv/riscv_uart.h
+index 039bc38..f1b5413 100644
+--- a/include/machine/riscv/riscv_uart.h
++++ b/include/machine/riscv/riscv_uart.h
+@@ -213,7 +213,7 @@ private:
+     static volatile CPU::Reg8 & reg(unsigned int o) { return reinterpret_cast<volatile CPU::Reg8 *>(Memory_Map::UART0_BASE)[o / sizeof(CPU::Reg8)]; }
+ };
+ 
+-class UART: private UART_Common, private IF<Traits<Build>::MODEL == Traits<Build>::SiFive_E, SiFive_UART, NS16500A>::Result
++class UART: private UART_Common, private IF<Traits<Build>::MODEL == Traits<Build>::SiFive_U, SiFive_UART, NS16500A>::Result
+ {
+ private:
+     static const unsigned int UNIT = Traits<UART>::DEF_UNIT;
+@@ -222,7 +222,7 @@ private:
+     static const unsigned int PARITY = Traits<UART>::DEF_PARITY;
+     static const unsigned int STOP_BITS = Traits<UART>::DEF_STOP_BITS;
+ 
+-    typedef IF<Traits<Build>::MODEL == Traits<Build>::SiFive_E, SiFive_UART, NS16500A>::Result Engine;
++    typedef IF<Traits<Build>::MODEL == Traits<Build>::SiFive_U, SiFive_UART, NS16500A>::Result Engine;
+ 
+ public:
+     using UART_Common::NONE;
+diff --git a/include/machine/riscv/sifive_u/sifive_u_memory_map.h b/include/machine/riscv/sifive_u/sifive_u_memory_map.h
+index 188240e..7e1e5ea 100644
+--- a/include/machine/riscv/sifive_u/sifive_u_memory_map.h
++++ b/include/machine/riscv/sifive_u/sifive_u_memory_map.h
+@@ -28,12 +28,22 @@ public:
+         FREE_TOP        = BOOT_STACK,
+ 
+         // Memory-mapped devices
+-        TEST_BASE       = 0x00100000, // SiFive test engine
+-        RTC_BASE        = 0x00101000, // Goldfish RTC
+-        UART0_BASE      = 0x10000000, // NS16550A UART
+-        CLINT_BASE      = 0x02000000, // SiFive CLINT
+-        TIMER_BASE      = 0x02004000, // CLINT Timer
+-        PLIIC_CPU_BASE  = 0x0c000000, // SiFive PLIC
++        BIOS_BASE       = 0x00001000,   // SiFive-E BIOS ROM
++        CLINT_BASE      = 0x02000000,   // SiFive CLINT
++        TIMER_BASE      = 0x02004000,   // CLINT Timer
++        PLIIC_CPU_BASE  = 0x0c000000,   // SiFive PLIC
++        AON_BASE        = 0x10000000,   // SiFive-E Always-On (AON) Domain (real-time stuff)
++        PRCI_BASE       = 0x10008000,   // SiFive-E Power, Reset, Clock, Interrupt
++        GPIO_BASE       = 0x10012000,   // SiFive-E GPIO
++        UART0_BASE      = 0x10010000,   // SiFive UART
++        SPI0_BASE       = 0x10014000,   // SiFive-E SPI
++        PWM0_BASE       = 0x10015000,   // SiFive-E GPIO
++        UART1_BASE      = 0x10023000,   // SiFive UART
++        SPI1_BASE       = 0x10034000,   // SiFive-E SPI
++        PWM1_BASE       = 0x10025000,   // SiFive-E GPIO
++        SPI2_BASE       = 0x10034000,   // SiFive-E SPI
++        PWM2_BASE       = 0x10035000,   // SiFive-E GPIO
++        FLASH_BASE      = 0x20000000,   // SiFive-E XIP
+ 
+         // Physical Memory at Boot
+         BOOT            = Traits<Machine>::BOOT,
+diff --git a/makedefs b/makedefs
+index f122b3e..3e381fb 100644
+--- a/makedefs
++++ b/makedefs
+@@ -197,7 +197,7 @@ riscv_CC_FLAGS		:= -march=rv32gc -mabi=ilp32f -Wl, -mno-relax
+ riscv_AS_FLAGS		:= -march=rv32gc -mabi=ilp32f
+ riscv_LD_FLAGS		:= -m elf32lriscv_ilp32f --no-relax
+ riscv_EMULATOR		= qemu-system-riscv32 $(QEMU_DEBUG) -machine sifive_e -m $(MEM_SIZE)k -serial mon:stdio -bios none -nographic -no-reboot $(BOOT_ROM) -kernel 
+-riscv_DEBUGGER		:= $(COMP_PREFIX)gdb
++riscv_DEBUGGER		:= gdb-multiarch -ex "set architecture riscv:rv32"
+ riscv_FLASHER		:= 
+ riscv_MAGIC		:= --nmagic
+ riscv_CODE_NAME		:= .init
+@@ -215,9 +215,9 @@ else
+ riscv_CC_FLAGS      := -march=rv32gc -mabi=ilp32d -Wl, -mno-relax
+ riscv_AS_FLAGS      := -march=rv32gc -mabi=ilp32d
+ riscv_LD_FLAGS      := -m elf32lriscv_ilp32f --no-relax
+-riscv_EMULATOR     = qemu-system-riscv32 $(QEMU_DEBUG) -machine virt -cpu rv32 -smp $(CPUS) -m $(MEM_SIZE)k -serial mon:stdio -bios none -nographic -no-reboot $(BOOT_ROM) -kernel 
++riscv_EMULATOR     = qemu-system-riscv32 $(QEMU_DEBUG) -machine sifive_u -cpu rv32 -smp 2 -m $(MEM_SIZE)k -serial mon:stdio -bios none -nographic -no-reboot -kernel 
+ endif 
+-riscv_DEBUGGER		:= $(COMP_PREFIX)gdb
++riscv_DEBUGGER		:= gdb-multiarch -ex "set architecture riscv:rv32"
+ riscv_FLASHER		:= 
+ riscv_MAGIC		:= --nmagic
+ riscv_CODE_NAME		:= .init
+diff --git a/src/architecture/rv64/makefile b/src/architecture/rv64/makefile
+new file mode 100644
+index 0000000..47f79a3
+--- /dev/null
++++ b/src/architecture/rv64/makefile
+@@ -0,0 +1,30 @@
++# EPOS RISC-V 32 Architecture Makefile
++
++include ../../../makedefs
++
++OBJS := $(subst .cc,.o,$(shell find *.cc | grep -v _init | grep -v _test))
++CRTS := $(subst .S,.o,$(shell find *.S | grep crt)) $(ARCH)_crtbegin.o $(ARCH)_crtend.o 
++CRTSI := $(subst .S,.s,$(shell find *.S | grep crt))
++INITS := $(subst .cc,.o,$(shell find *.cc | grep _init))
++
++all:		crts $(LIBARCH) $(LIBINIT)
++
++crts:		$(CRTS)
++		$(INSTALL) $(ARCH)_crt0.o $(LIB)/crt0_$(MMOD).o
++		$(INSTALL) $(ARCH)_crtbegin.o $(LIB)/crtbegin_$(MMOD).o
++		$(INSTALL) $(ARCH)_crtend.o $(LIB)/crtend_$(MMOD).o
++
++.INTERMEDIATE:	$(CRTSI)
++
++$(LIBARCH):	$(LIBARCH)($(OBJS))
++
++$(LIBINIT):	$(LIBINIT)($(INITS))
++
++$(ARCH)_crtbegin.o: ../common/crtbegin.c
++		$(CC) $(CCFLAGS) $< -o $@
++
++$(ARCH)_crtend.o: ../common/crtend.c
++		$(CC) $(CCFLAGS) $< -o $@
++
++clean:
++		$(CLEAN) *.o *.s *_test
+diff --git a/src/architecture/rv64/rv64_cpu.cc b/src/architecture/rv64/rv64_cpu.cc
+new file mode 100644
+index 0000000..2dcfbb6
+--- /dev/null
++++ b/src/architecture/rv64/rv64_cpu.cc
+@@ -0,0 +1,75 @@
++// EPOS RISC-V 64 CPU Mediator Implementation
++
++#include <architecture/rv64/rv64_cpu.h>
++#include <system.h>
++
++__BEGIN_SYS
++
++unsigned int CPU::_cpu_clock;
++unsigned int CPU::_bus_clock;
++
++void CPU::Context::save() volatile
++{
++    ASM("       csrr     x3,  sscratch          \n"     // sscratch = usp (sscratch holds ksp in user-land and usp in kernel; usp = 0 for kernel threads)
++        "       sw       x3,    0(a0)           \n"     // push usp
++        "       sw       x1,    4(a0)           \n");   // push lr as pc
++if(multitask)
++    ASM("       csrr     x3,  sstatus           \n");
++else
++    ASM("       csrr     x3,  mstatus           \n");
++
++    ASM("       sw       x3,    8(a0)           \n"     // push st
++        "       sw       x1,   12(a0)           \n"     // push ra
++        "       sw       x5,   16(a0)           \n"     // push x5-x31
++        "       sw       x6,   20(a0)           \n"
++        "       sw       x7,   24(a0)           \n"
++        "       sw       x8,   28(a0)           \n"
++        "       sw       x9,   32(a0)           \n"
++        "       sw      x10,   36(a0)           \n"
++        "       sw      x11,   40(a0)           \n"
++        "       sw      x12,   44(a0)           \n"
++        "       sw      x13,   48(a0)           \n"
++        "       sw      x14,   52(a0)           \n"
++        "       sw      x15,   56(a0)           \n"
++        "       sw      x16,   60(a0)           \n"
++        "       sw      x17,   64(a0)           \n"
++        "       sw      x18,   68(a0)           \n"
++        "       sw      x19,   72(a0)           \n"
++        "       sw      x20,   76(a0)           \n"
++        "       sw      x21,   80(a0)           \n"
++        "       sw      x22,   84(a0)           \n"
++        "       sw      x23,   88(a0)           \n"
++        "       sw      x24,   92(a0)           \n"
++        "       sw      x25,   96(a0)           \n"
++        "       sw      x26,  100(a0)           \n"
++        "       sw      x27,  104(a0)           \n"
++        "       sw      x28,  108(a0)           \n"
++        "       sw      x29,  112(a0)           \n"
++        "       sw      x30,  116(a0)           \n"
++        "       sw      x31,  120(a0)           \n"
++        "       ret                             \n");
++}
++
++// Context load does not verify if interrupts were previously enabled by the Context's constructor
++// We are setting mstatus to MPP | MPIE, therefore, interrupts will be enabled only after mret
++void CPU::Context::load() const volatile
++{
++    sp(Log_Addr(this));
++    pop();
++    iret();
++}
++
++void CPU::switch_context(Context ** o, Context * n)     // "o" is in a0 and "n" is in a1
++{   
++    // Push the context into the stack and update "o"
++    Context::push();
++    ASM("sw sp, 0(a0)");   // update Context * volatile * o, which is in a0
++
++    // Set the stack pointer to "n" and pop the context from the stack
++    ASM("mv sp, a1");   // "n" is in a1
++    Context::pop();
++    iret();
++}
++
++__END_SYS
++
+diff --git a/src/architecture/rv64/rv64_cpu_init.cc b/src/architecture/rv64/rv64_cpu_init.cc
+new file mode 100644
+index 0000000..0c3d735
+--- /dev/null
++++ b/src/architecture/rv64/rv64_cpu_init.cc
+@@ -0,0 +1,26 @@
++// EPOS RISC-V 64 CPU Mediator Initialization
++
++#include <architecture.h>
++
++extern "C" { void __epos_library_app_entry(void); }
++
++__BEGIN_SYS
++
++void CPU::init()
++{
++    db<Init, CPU>(TRC) << "CPU::init()" << endl;
++
++    if(CPU::id() == 0) {
++        if(Traits<MMU>::enabled)
++            MMU::init();
++        else
++            db<Init, MMU>(WRN) << "MMU is disabled!" << endl;
++    }
++
++#ifdef __TSC_H
++    if(Traits<TSC>::enabled)
++        TSC::init();
++#endif
++}
++
++__END_SYS
+diff --git a/src/architecture/rv64/rv64_cpu_test.cc b/src/architecture/rv64/rv64_cpu_test.cc
+new file mode 100644
+index 0000000..a0e7080
+--- /dev/null
++++ b/src/architecture/rv64/rv64_cpu_test.cc
+@@ -0,0 +1,63 @@
++// EPOS RISC-V 64 Test Program
++
++#include <architecture/cpu.h>
++
++using namespace EPOS;
++
++int main()
++{
++    OStream cout;
++    cout << "RISC-V 64bits test" << endl;
++
++    CPU cpu;
++
++    {
++        volatile bool lock = false;
++        if(cpu.tsl(lock))
++            cout << "tsl(): doesn't function properly!(1)" << endl;
++        else
++            if(cpu.tsl(lock))
++                cout << "tsl(): ok" << endl;
++            else
++                cout << "tsl(): doesn't function properly!(2)" << endl;
++    }
++    {
++        volatile int number = 100;
++        volatile int tmp;
++        if((tmp = cpu.finc(number)) != 100)
++            cout << "finc(): doesn't function properly (n=" << tmp << ", should be 100)!" << endl;
++        else
++            if((tmp = cpu.finc(number)) != 101)
++                cout << "finc(): doesn't function properly (n=" << tmp << ", should be 101)!" << endl;
++            else
++                cout << "finc(): ok" << endl;
++    }
++    {
++        volatile int number = 100;
++        volatile int tmp;
++        if((tmp = cpu.fdec(number)) != 100)
++            cout << "fdec(): doesn't function properly (n=" << tmp << ", should be 100)!" << endl;
++        else
++            if((tmp = cpu.fdec(number)) != 99)
++                cout << "fdec(): doesn't function properly (n=" << tmp << ", should be 99)!" << endl;
++            else
++                cout << "fdec(): ok" << endl;
++    }
++    {
++        volatile int number = 100;
++        volatile int compare = number;
++        volatile int replacement = number - 1;
++        volatile int tmp;
++        if((tmp = cpu.cas(number, compare, replacement)) != compare)
++            cout << "cas(): doesn't function properly [1] (n=" << tmp << ", should be " << compare << ")!" << endl;
++        else
++            if((tmp = cpu.cas(number, compare, replacement)) != replacement)
++                cout << "cas(): doesn't function properly [2] (n=" << tmp << ", should be " << replacement << ")!" << endl;
++            else
++                cout << "cas(): ok" << endl;
++    }
++
++    cout << "RISC-V 64bits test finished" << endl;
++
++    return 0;
++}
+diff --git a/src/architecture/rv64/rv64_crt0.S b/src/architecture/rv64/rv64_crt0.S
+new file mode 100644
+index 0000000..576db99
+--- /dev/null
++++ b/src/architecture/rv64/rv64_crt0.S
+@@ -0,0 +1,24 @@
++// EPOS RISC-V 64 Program Starter
++
++        .file "rv64_crt0.S"
++
++        .section .text
++        .align  4
++        .global _start
++        .type   _start, function
++_start:
++        // Temporary stack(s) for INIT were created and configure by SETUP
++        // BSS was cleared by SETUP
++        call      _init
++
++        .align  4
++        .globl  __epos_app_entry
++        .type   __epos_app_entry, function
++__epos_app_entry:
++        // Main's stack was allocated by Thread::init()
++        call    main
++        addi    sp, sp, -4
++        sw      a0, 0(sp)   // save main's return value to be used by exit()
++        call    _fini
++        lw      a0, 0(sp)
++        call    _exit
+diff --git a/src/architecture/rv64/rv64_mmu.cc b/src/architecture/rv64/rv64_mmu.cc
+new file mode 100644
+index 0000000..4fb0a38
+--- /dev/null
++++ b/src/architecture/rv64/rv64_mmu.cc
+@@ -0,0 +1,10 @@
++// EPOS RISC-V 32 MMU Mediator Implementation
++
++#include <architecture/rv64/rv64_mmu.h>
++
++__BEGIN_SYS
++
++RV64S_MMU::List RV64S_MMU::_free[colorful * COLORS + 1];
++RV64S_MMU::Page_Directory * RV64S_MMU::_master;
++
++__END_SYS
+diff --git a/src/architecture/rv64/rv64_mmu_init.cc b/src/architecture/rv64/rv64_mmu_init.cc
+new file mode 100644
+index 0000000..4bf521f
+--- /dev/null
++++ b/src/architecture/rv64/rv64_mmu_init.cc
+@@ -0,0 +1,23 @@
++// EPOS RISC-V 64 MMU Mediator Initialization
++
++#include <architecture/mmu.h>
++#include <system.h>
++
++#ifdef __sifive_u__
++
++__BEGIN_SYS
++
++void RV64S_MMU::init()
++{
++    db<Init, MMU>(TRC) << "MMU::init()" << endl;
++
++    free(System::info()->pmm.free1_base, pages(System::info()->pmm.free1_top - System::info()->pmm.free1_base));
++
++    // Remember the master page directory (created during SETUP)
++    _master = current();
++    db<Init, MMU>(INF) << "MMU::master page directory=" << _master << endl;
++}
++
++__END_SYS
++
++#endif
+diff --git a/src/setup/setup_sifive_u.cc b/src/setup/setup_sifive_u.cc
+index 9c9b207..373b41f 100644
+--- a/src/setup/setup_sifive_u.cc
++++ b/src/setup/setup_sifive_u.cc
+@@ -143,6 +143,8 @@ using namespace EPOS::S;
+ 
+ void _entry() // machine mode
+ {
++    if(CPU::id() != 0)
++        while(1);
+     CPU::mstatusc(CPU::MIE);                            // disable interrupts
+     CPU::mies(CPU::MSI | CPU::MTI | CPU::MEI);          // enable interrupts at CLINT so IPI and timer can be triggered
+     CLINT::mtvec(CLINT::DIRECT, _int_entry);            // setup a preliminary machine mode interrupt handler pointing it to _int_entry

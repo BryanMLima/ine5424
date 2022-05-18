@@ -107,8 +107,6 @@ class RV32_PMU_U: public PMU_Common
         }
 
     private:
-        // We later discovered that this CSR are hard wired to zero. Therefore, it's useless in the current scenario.
-        // We only maintained because it took a while to test it, and maybe it can be usefull in the future.
         static Reg64 mhpmcounter3() { Reg64 reg; ASM("csrr %0, mhpmcounter3\n\t" : "=r"(reg) : ); return reg; }
         static void mhpmcounter3(Reg64 r) {  ASM("csrw mhpmcounter3, %0" : : "r"(r) :); }
 
@@ -121,7 +119,7 @@ class RV32_PMU_U: public PMU_Common
         static Reg32 mhpmcounter4h() { Reg32 reg; ASM("csrr %0, mhpmcounter4h\n\t" : "=r"(reg) : ); return reg; }
         static void mhpmcounter4h(Reg32 r) {  ASM("csrw mhpmcounter4h, %0" : : "r"(r) :); }
 
-        static Reg32 mhpmevent3() { Reg32 reg; ASM("csrr %0, mhpmevent6\n\t" : "=r"(reg) : ); return reg; }
+        static Reg32 mhpmevent3() { Reg32 reg; ASM("csrr %0, mhpmevent3\n\t" : "=r"(reg) : ); return reg; }
         static void mhpmevent3(Reg32 r) {  ASM("csrw mhpmevent3, %0" : : "r"(r) :); }
 
         static Reg32 mhpmevent4() { Reg32 reg; ASM("csrr %0, mhpmevent4\n\t" : "=r"(reg) : ); return reg; }
