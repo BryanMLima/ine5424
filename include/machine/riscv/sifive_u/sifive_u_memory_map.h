@@ -1,4 +1,4 @@
-// EPOS SiFive-U (RISC-V) Memory Map
+// EPOS SiFive-u (RISC-V) Memory Map
 
 #ifndef __riscv_sifive_u_memory_map_h
 #define __riscv_sifive_u_memory_map_h
@@ -14,7 +14,7 @@ private:
     static const bool multitask = Traits<System>::multitask;
 
 public:
-    enum : unsigned long {
+    enum {
         NOT_USED        = Traits<Machine>::NOT_USED,
 
         // Physical Memory
@@ -28,12 +28,22 @@ public:
         FREE_TOP        = BOOT_STACK,
 
         // Memory-mapped devices
-        TEST_BASE       = 0x00100000, // SiFive test engine
-        RTC_BASE        = 0x00101000, // Goldfish RTC
-        UART0_BASE      = 0x10000000, // NS16550A UART
-        CLINT_BASE      = 0x02000000, // SiFive CLINT
-        TIMER_BASE      = 0x02004000, // CLINT Timer
-        PLIIC_CPU_BASE  = 0x0c000000, // SiFive PLIC
+        BIOS_BASE       = 0x00001000,   // SiFive-E BIOS ROM
+        CLINT_BASE      = 0x02000000,   // SiFive CLINT
+        TIMER_BASE      = 0x02004000,   // CLINT Timer
+        PLIIC_CPU_BASE  = 0x0c000000,   // SiFive PLIC
+        AON_BASE        = 0x10000000,   // SiFive-E Always-On (AON) Domain (real-time stuff)
+        PRCI_BASE       = 0x10008000,   // SiFive-E Power, Reset, Clock, Interrupt
+        GPIO_BASE       = 0x10012000,   // SiFive-E GPIO
+        UART0_BASE      = 0x10010000,   // SiFive UART
+        SPI0_BASE       = 0x10014000,   // SiFive-E SPI
+        PWM0_BASE       = 0x10015000,   // SiFive-E GPIO
+        UART1_BASE      = 0x10023000,   // SiFive UART
+        SPI1_BASE       = 0x10034000,   // SiFive-E SPI
+        PWM1_BASE       = 0x10025000,   // SiFive-E GPIO
+        SPI2_BASE       = 0x10034000,   // SiFive-E SPI
+        PWM2_BASE       = 0x10035000,   // SiFive-E GPIO
+        FLASH_BASE      = 0x20000000,   // SiFive-E XIP
 
         // Physical Memory at Boot
         BOOT            = Traits<Machine>::BOOT,
