@@ -1,4 +1,4 @@
-// EPOS SiFive-u (RISC-V) Memory Map
+// EPOS SiFive-U (RISC-V) Memory Map
 
 #ifndef __riscv_sifive_u_memory_map_h
 #define __riscv_sifive_u_memory_map_h
@@ -14,7 +14,7 @@ private:
     static const bool multitask = Traits<System>::multitask;
 
 public:
-    enum {
+    enum : unsigned long {
         NOT_USED        = Traits<Machine>::NOT_USED,
 
         // Physical Memory

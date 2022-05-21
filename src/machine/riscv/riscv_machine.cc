@@ -23,10 +23,8 @@ void Machine::reboot()
     if(Traits<System>::reboot) {
         db<Machine>(WRN) << "Machine::reboot()" << endl;
 
-#ifdef __sifive_e__
         CPU::Reg * reset = reinterpret_cast<CPU::Reg *>(Memory_Map::AON_BASE);
         reset[0] = 0x5555;
-#endif
 
         while(true);
     } else {
@@ -38,10 +36,8 @@ void Machine::poweroff()
 {
     db<Machine>(WRN) << "Machine::poweroff()" << endl;
 
-#ifdef __sifive_e__
         CPU::Reg * reset = reinterpret_cast<CPU::Reg *>(Memory_Map::AON_BASE);
         reset[0] = 0x5555;
-#endif
 
     while(true);
 }
