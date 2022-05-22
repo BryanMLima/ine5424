@@ -5,6 +5,7 @@
 #include <memory.h>
 #include <system.h>
 #include <process.h>
+// #include <include/machine/flash.h>
 
 __BEGIN_SYS
 
@@ -31,7 +32,7 @@ public:
             else
                 heap = Address_Space(MMU::current()).attach(System::_heap_segment, Memory_Map::SYS_HEAP);
             if(!heap)
-                db<Init>(ERR) << "failed!" << endl;
+                db<Init>(ERR) << "System heap failed!" << endl;
             System::_heap = new (&System::_preheap[sizeof(Segment)]) Heap(heap, System::_heap_segment->size());
         } else
             System::_heap = new (&System::_preheap[0]) Heap(MMU::alloc(MMU::pages(HEAP_SIZE)), HEAP_SIZE);

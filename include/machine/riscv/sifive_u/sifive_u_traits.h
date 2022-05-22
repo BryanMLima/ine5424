@@ -95,6 +95,13 @@ template<> struct Traits<Scratchpad>: public Traits<Machine_Common>
     static const bool enabled = true;
 };
 
+template<> struct Traits<Flash>: public Traits<Machine_Common>
+{
+    static const bool enabled = false;
+    static const unsigned int ADDRESS = 0x20000000;
+    static const unsigned int SIZE = 1024;
+};
+
 __END_SYS
 
 #endif

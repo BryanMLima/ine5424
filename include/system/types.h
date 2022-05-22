@@ -192,6 +192,7 @@ enum
     RTC_ID,
     EEPROM_ID,
     SCRATCHPAD_ID,
+    FLASH_ID,
     UART_ID,
     DISPLAY_ID,
     KEYBOARD_ID,
@@ -221,6 +222,7 @@ template<> struct Type<PCI> { static const Type_Id ID = PCI_ID; };
 template<> struct Type<Display> { static const Type_Id ID = DISPLAY_ID; };
 template<> struct Type<Keyboard> { static const Type_Id ID = KEYBOARD_ID; };
 template<> struct Type<Scratchpad> { static const Type_Id ID = SCRATCHPAD_ID; };
+template<> struct Type<Flash> { static const Type_Id ID = FLASH_ID; };
 template<> struct Type<Ethernet> { static const Type_Id ID = NIC_ID; };
 template<> struct Type<IEEE802_15_4> { static const Type_Id ID = NIC_ID; };
 

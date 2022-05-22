@@ -58,6 +58,7 @@ class Serial_Display;
 class Keyboard;
 class Serial_Keyboard;
 class Scratchpad;
+class Flash;
 class Watchdog;
 class GPIO;
 class I2C;

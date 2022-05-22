@@ -21,6 +21,10 @@ void Machine::init()
 
     if(Traits<Timer>::enabled)
         Timer::init();
+// #ifdef __FLASH_H
+    if(Traits<Flash>::enabled)
+        Flash::init();
+// #endif
 }
 
 __END_SYS

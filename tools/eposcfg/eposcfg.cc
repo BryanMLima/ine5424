@@ -22,8 +22,8 @@ using namespace EPOS::S;
 using namespace EPOS::S::U;
 
 // Constants
-const unsigned int TOKENS = 31;
-const unsigned int COMPONENTS = 62;
+const unsigned int TOKENS = 32;
+const unsigned int COMPONENTS = 63;
 const unsigned int STRING_SIZE = 128;
 
 // Configuration tokens (integer tokens first, marked by INT_TOKENS)
@@ -56,6 +56,7 @@ char tokens[TOKENS][STRING_SIZE] = {
     "SYS_DATA",
     "SYS_STACK",
     "SYS_HEAP",
+    "FLASH_HEAP",
     "EXPECTED_SIMULATION_TIME"
 };
 
@@ -82,6 +83,7 @@ char components[COMPONENTS][STRING_SIZE] = {
     "Keyboard",
     "Serial_Keyboard",
     "Scratchpad",
+    "Flash",
     "GPIO",
     "I2C",
     "ADC",
@@ -369,6 +371,7 @@ void populate_strings()
     if(Traits<Keyboard>::enabled)       enable_component("Keyboard");
     if(Traits<Serial_Keyboard>::enabled)enable_component("Serial_Keyboard");
     if(Traits<Scratchpad>::enabled)     enable_component("Scratchpad");
+    if(Traits<Flash>::enabled)          enable_component("Flash");
     if(Traits<GPIO>::enabled)           enable_component("GPIO");
     if(Traits<I2C>::enabled)            enable_component("I2C");
     if(Traits<ADC>::enabled)            enable_component("ADC");

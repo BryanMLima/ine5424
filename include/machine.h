@@ -23,7 +23,7 @@
 #include <machine/scratchpad.h>
 #endif
 #ifdef __FLASH_H
-#include <machine/flash .h>
+#include <machine/flash.h>
 #endif
 #ifdef __UART_H
 #include <machine/uart.h>

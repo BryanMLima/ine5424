@@ -70,7 +70,8 @@ public:
         SYS_DATA        = multitask ? SYS + 0x00103000 : NOT_USED,
         SYS_STACK       = multitask ? SYS + 0x00200000 : NOT_USED,
         SYS_HEAP        = multitask ? SYS + 0x00400000 : NOT_USED,
-        SYS_HIGH        = multitask ? SYS + 0x007fffff : NOT_USED
+        SYS_HIGH        = multitask ? SYS + 0x007fffff : NOT_USED,
+        FLASH_HEAP      = multitask ? FLASH_BASE       : NOT_USED
     };
 };
 
