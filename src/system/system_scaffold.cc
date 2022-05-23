@@ -7,7 +7,7 @@
 #include <process.h>
 #include <system.h>
 // #include <flash.h>
-#include <include/machine/flash.h>
+// #include <machine/flash.h>
 
 extern char __boot_time_system_info[];
 
