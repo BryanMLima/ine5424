@@ -22,6 +22,7 @@ private:
     static const unsigned int APP_LOW = Memory_Map::APP_LOW;
     static const unsigned int PHY_MEM = Memory_Map::PHY_MEM;
     static const unsigned int SYS = Memory_Map::SYS;
+    // static const unsigned int FLASH = Memory_Map::FLASH;
     static const unsigned int IO = Memory_Map::IO;
 
 public:
@@ -44,6 +45,7 @@ public:
             APPC = (V | R | X | U),
             APPD = (V | R | W | U),
             SYS  = (V | R | W | X),
+            FLASH= (V | R | W | X),
             IO   = (SYS | MIO),
             DMA  = (SYS | CT),
             MASK = (1 << 10) - 1

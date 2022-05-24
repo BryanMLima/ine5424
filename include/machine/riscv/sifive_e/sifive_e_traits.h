@@ -41,7 +41,7 @@ public:
     static const unsigned int APP_DATA          = library ? APP_LOW : APP_CODE + 4 * 1024 * 1024;
 
     static const unsigned int INIT              = library ? NOT_USED :0x80080000;       // RAM_BASE + 512 KB (will be part of the free memory at INIT)
-    static const unsigned int PHY_MEM           = 0x20000000;                           // 512 MB (max 1536 MB of RAM)
+    static const unsigned int PHY_MEM           = 0x20200000;                           // 512 MB (max 1536 MB of RAM)
     static const unsigned int IO                = 0x00000000;                           // 0 (max 512 MB of IO = MIO_TOP - MIO_BASE)
     static const unsigned int SYS               = 0xff800000;                           // 4 GB - 8 MB
 
@@ -102,7 +102,7 @@ template<> struct Traits<Scratchpad>: public Traits<Machine_Common>
 template<> struct Traits<Flash>: public Traits<Machine_Common>
 {
     static const bool enabled = false;
-    static const unsigned int ADDRESS = 0x20000000;
+    static const unsigned int ADDRESS = 0x20031123000;
     static const unsigned int SIZE = 1024;
 };
 

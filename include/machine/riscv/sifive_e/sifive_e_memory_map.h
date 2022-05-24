@@ -42,7 +42,7 @@ public:
         PWM1_BASE       = 0x10025000,   // SiFive-E GPIO
         SPI2_BASE       = 0x10034000,   // SiFive-E SPI
         PWM2_BASE       = 0x10035000,   // SiFive-E GPIO
-        FLASH_BASE      = 0x20000000,   // SiFive-E XIP
+        FLASH_BASE      = 0x200040000,   // SiFive-E XIP
 
         // Physical Memory at Boot
         BOOT            = Traits<Machine>::BOOT,
@@ -69,8 +69,7 @@ public:
         SYS_DATA        = multitask ? SYS + 0x00103000 : NOT_USED,
         SYS_STACK       = multitask ? SYS + 0x00200000 : NOT_USED,
         SYS_HEAP        = multitask ? SYS + 0x00400000 : NOT_USED,
-        SYS_HIGH        = multitask ? SYS + 0x007fffff : NOT_USED,
-        FLASH_HEAP      = multitask ? FLASH_BASE       : NOT_USED
+        SYS_HIGH        = multitask ? SYS + 0x007fffff : NOT_USED
     };
 };
 

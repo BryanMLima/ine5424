@@ -22,7 +22,7 @@ using namespace EPOS::S;
 using namespace EPOS::S::U;
 
 // Constants
-const unsigned int TOKENS = 32;
+const unsigned int TOKENS = 31;
 const unsigned int COMPONENTS = 63;
 const unsigned int STRING_SIZE = 128;
 
@@ -56,7 +56,6 @@ char tokens[TOKENS][STRING_SIZE] = {
     "SYS_DATA",
     "SYS_STACK",
     "SYS_HEAP",
-    "FLASH_HEAP",
     "EXPECTED_SIMULATION_TIME"
 };
 
