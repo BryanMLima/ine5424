@@ -22,7 +22,7 @@ private:
     static const unsigned int APP_LOW = Memory_Map::APP_LOW;
     static const unsigned int PHY_MEM = Memory_Map::PHY_MEM;
     static const unsigned int SYS = Memory_Map::SYS;
-    // static const unsigned int FLASH = Memory_Map::FLASH;
+    static const unsigned int FLASH = Memory_Map::FLASH_BASE;
     static const unsigned int IO = Memory_Map::IO;
 
 public:

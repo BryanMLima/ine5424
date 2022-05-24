@@ -1,0 +1,799 @@
+diff --git a/.vscode/settings.json b/.vscode/settings.json
+new file mode 100644
+index 0000000..821f4bc
+--- /dev/null
++++ b/.vscode/settings.json
+@@ -0,0 +1,5 @@
++{
++    "files.associations": {
++        "type_traits": "cpp"
++    }
++}
+\ No newline at end of file
+diff --git a/app/e5b/e5b.cc b/app/e5b/e5b.cc
+new file mode 100644
+index 0000000..ff65c0c
+--- /dev/null
++++ b/app/e5b/e5b.cc
+@@ -0,0 +1,30 @@
++#include <utility/ostream.h>
++#include <architecture/rv32/rv32_pmu.h>
++#include <architecture/cpu.h>
++
++
++using namespace EPOS;
++
++OStream cout;
++
++int main()
++{
++    CPU_Common::Reg64 teste = 0x00000000;
++
++    RV32_PMU_U::write_mhpmevent3((RV32_PMU_U::read_mhpmevent3() & 0x00) | RV32_PMU_U::SYSTEM_INSTRUCTION_RETIRED);
++
++
++    cout << "  mcycle value: " << RV32_PMU_U::read_mcycle() << endl;
++    cout << "minstret value: " << RV32_PMU_U::read_minstret() << endl;
++
++    for (size_t i = 0; i < 100; i++)
++    {
++        RV32_PMU_U::read_mcycle();
++    }
++    
++    cout << "mhpmcounter3: " << RV32_PMU_U::read_mhpmcounter3() << endl;
++    cout << "mhpmevent3: " << RV32_PMU_U::read_mhpmevent3() << endl;
++    // As we tested with multiple values, we can only assume it is "hard wired" to zero, as the manual mentions it. By that, we mean QEMU didn't implemented.
++
++    return 0;
++}
+\ No newline at end of file
+diff --git a/app/flash_test/flash_test.cc b/app/flash_test/flash_test.cc
+new file mode 100644
+index 0000000..0a35c15
+--- /dev/null
++++ b/app/flash_test/flash_test.cc
+@@ -0,0 +1,26 @@
++// EPOS Segment Test Program
++
++#include <memory.h>
++#include <machine/flash.h>
++
++using namespace EPOS;
++
++int main()
++{
++    OStream cout;
++
++    cout << "          Flash test" << endl;
++    cout << "Flash base address: " << CPU::Phy_Addr(Traits<Flash>::ADDRESS) << endl;
++    cout << "        Flash size: " << CPU::Phy_Addr(Traits<Flash>::SIZE) << " -> " << Traits<Flash>::SIZE << " bytes" << endl;
++
++    int *array = new (FLASH) int[3] {1, 2, 3};
++
++    cout << "         Array addr " << array << endl;
++    cout << "      Array[0] addr " << &array[0] << endl;
++    cout << "      Array[1] addr " << &array[1] << endl;
++    cout << "      Array[2] addr " << &array[2] << endl;
++
++    cout << " Finished, bye!" << endl;
++
++    return 0;
++}
+\ No newline at end of file
+diff --git a/app/flash_test/flash_test_traits.h b/app/flash_test/flash_test_traits.h
+new file mode 100644
+index 0000000..7a5f038
+--- /dev/null
++++ b/app/flash_test/flash_test_traits.h
+@@ -0,0 +1,155 @@
++#ifndef __traits_h
++#define __traits_h
++
++#include <system/config.h>
++
++__BEGIN_SYS
++
++// Build
++template<> struct Traits<Build>: public Traits_Tokens
++{
++    // Basic configuration
++    static const unsigned int MODE = LIBRARY;
++    static const unsigned int ARCHITECTURE = RV32;
++    static const unsigned int MACHINE = RISCV;
++    static const unsigned int MODEL = SiFive_U; 
++    static const unsigned int CPUS = 1;
++    static const unsigned int NODES = 1; // (> 1 => NETWORKING)
++    static const unsigned int EXPECTED_SIMULATION_TIME = 60; // s (0 => not simulated)
++
++    // Default flags
++    static const bool enabled = true;
++    static const bool monitored = false;
++    static const bool debugged = true;
++    static const bool hysterically_debugged = false;
++
++    // Default aspects
++    typedef ALIST<> ASPECTS;
++};
++
++
++// Utilities
++template<> struct Traits<Debug>: public Traits<Build>
++{
++    static const bool error   = true;
++    static const bool warning = true;
++    static const bool info    = false;
++    static const bool trace   = false;
++};
++
++template<> struct Traits<Lists>: public Traits<Build>
++{
++    static const bool debugged = hysterically_debugged;
++};
++
++template<> struct Traits<Spin>: public Traits<Build>
++{
++    static const bool debugged = hysterically_debugged;
++};
++
++template<> struct Traits<Heaps>: public Traits<Build>
++{
++    static const bool debugged = hysterically_debugged;
++};
++
++template<> struct Traits<Observers>: public Traits<Build>
++{
++    // Some observed objects are created before initializing the Display
++    // Enabling debug may cause trouble in some Machines
++    static const bool debugged = false;
++};
++
++
++// System Parts (mostly to fine control debugging)
++template<> struct Traits<Boot>: public Traits<Build>
++{
++};
++
++template<> struct Traits<Setup>: public Traits<Build>
++{
++};
++
++template<> struct Traits<Init>: public Traits<Build>
++{
++};
++
++template<> struct Traits<Framework>: public Traits<Build>
++{
++};
++
++template<> struct Traits<Aspect>: public Traits<Build>
++{
++    static const bool debugged = hysterically_debugged;
++};
++
++
++__END_SYS
++
++// Mediators
++#include __ARCHITECTURE_TRAITS_H
++#include __MACHINE_TRAITS_H
++
++__BEGIN_SYS
++
++
++// API Components
++template<> struct Traits<Application>: public Traits<Build>
++{
++    static const unsigned int STACK_SIZE = Traits<Machine>::STACK_SIZE;
++    static const unsigned int HEAP_SIZE = (MODEL == SiFive_E) ? Traits<Machine>::STACK_SIZE : Traits<Machine>::HEAP_SIZE;
++    static const unsigned int MAX_THREADS = Traits<Machine>::MAX_THREADS;
++};
++
++template<> struct Traits<System>: public Traits<Build>
++{
++    static const unsigned int mode = Traits<Build>::MODE;
++    static const bool multithread = (Traits<Build>::CPUS > 1) || (Traits<Application>::MAX_THREADS > 1);
++    static const bool multitask = (mode != Traits<Build>::LIBRARY);
++    static const bool multicore = (Traits<Build>::CPUS > 1) && multithread;
++    static const bool multiheap = true;
++
++    static const unsigned long LIFE_SPAN = 1 * YEAR; // s
++    static const unsigned int DUTY_CYCLE = 1000000; // ppm
++
++    static const bool reboot = true;
++
++    static const unsigned int STACK_SIZE = Traits<Machine>::STACK_SIZE;
++    static const unsigned int HEAP_SIZE = (Traits<Application>::MAX_THREADS + 1) * Traits<Application>::STACK_SIZE;
++};
++
++template<> struct Traits<Task>: public Traits<Build>
++{
++    static const bool enabled = Traits<System>::multitask;
++};
++
++template<> struct Traits<Thread>: public Traits<Build>
++{
++    static const bool enabled = Traits<System>::multithread;
++    static const bool smp = Traits<System>::multicore;
++    static const bool trace_idle = hysterically_debugged;
++    static const bool simulate_capacity = false;
++
++    static const bool preemptive = true;
++    static const unsigned int QUANTUM = 100000; // us
++};
++
++template<> struct Traits<Scheduler<Thread>>: public Traits<Build>
++{
++    static const bool debugged = Traits<Thread>::trace_idle || hysterically_debugged;
++};
++
++template<> struct Traits<Synchronizer>: public Traits<Build>
++{
++    static const bool enabled = Traits<System>::multithread;
++};
++
++template<> struct Traits<Alarm>: public Traits<Build>
++{
++    static const bool visible = hysterically_debugged;
++};
++
++template<> struct Traits<Address_Space>: public Traits<Build> {};
++
++__END_SYS
++
++#endif
+diff --git a/app/flash_test/makefile b/app/flash_test/makefile
+new file mode 100644
+index 0000000..8a6578a
+--- /dev/null
++++ b/app/flash_test/makefile
+@@ -0,0 +1,17 @@
++# EPOS Application Makefile
++
++include ../../makedefs
++
++all: install
++
++$(APPLICATION):	$(APPLICATION).o $(LIB)/*
++		$(ALD) $(ALDFLAGS) -o $@ $(APPLICATION).o
++
++$(APPLICATION).o: $(APPLICATION).cc $(SRC)
++		$(ACC) $(ACCFLAGS) -o $@ $<
++
++install: $(APPLICATION)
++		$(INSTALL) $(APPLICATION) $(IMG)
++
++clean:
++		$(CLEAN) *.o $(APPLICATION)
+diff --git a/app/hello/hello_traits.h b/app/hello/hello_traits.h
+index fd7f9e9..d477c24 100644
+--- a/app/hello/hello_traits.h
++++ b/app/hello/hello_traits.h
+@@ -12,7 +12,7 @@ template<> struct Traits<Build>: public Traits_Tokens
+     static const unsigned int MODE = LIBRARY;
+     static const unsigned int ARCHITECTURE = RV32;
+     static const unsigned int MACHINE = RISCV;
+-    static const unsigned int MODEL = SiFive_E; 
++    static const unsigned int MODEL = SiFive_U; 
+     static const unsigned int CPUS = 1;
+     static const unsigned int NODES = 1; // (> 1 => NETWORKING)
+     static const unsigned int EXPECTED_SIMULATION_TIME = 60; // s (0 => not simulated)
+@@ -34,7 +34,7 @@ template<> struct Traits<Debug>: public Traits<Build>
+     static const bool error   = true;
+     static const bool warning = true;
+     static const bool info    = false;
+-    static const bool trace   = false;
++    static const bool trace   = true;
+ };
+ 
+ template<> struct Traits<Lists>: public Traits<Build>
+diff --git a/app/philosophers_dinner/philosophers_dinner_traits.h b/app/philosophers_dinner/philosophers_dinner_traits.h
+index f711465..6a064ed 100644
+--- a/app/philosophers_dinner/philosophers_dinner_traits.h
++++ b/app/philosophers_dinner/philosophers_dinner_traits.h
+@@ -12,7 +12,7 @@ template<> struct Traits<Build>: public Traits_Tokens
+     static const unsigned int MODE = LIBRARY;
+     static const unsigned int ARCHITECTURE = RV32;
+     static const unsigned int MACHINE = RISCV;
+-    static const unsigned int MODEL = SiFive_E;
++    static const unsigned int MODEL = SiFive_U;
+     static const unsigned int CPUS = 1;
+     static const unsigned int NODES = 1; // (> 1 => NETWORKING)
+     static const unsigned int EXPECTED_SIMULATION_TIME = 60; // s (0 => not simulated)
+diff --git a/app/producer_consumer/producer_consumer_traits.h b/app/producer_consumer/producer_consumer_traits.h
+index f711465..6a064ed 100644
+--- a/app/producer_consumer/producer_consumer_traits.h
++++ b/app/producer_consumer/producer_consumer_traits.h
+@@ -12,7 +12,7 @@ template<> struct Traits<Build>: public Traits_Tokens
+     static const unsigned int MODE = LIBRARY;
+     static const unsigned int ARCHITECTURE = RV32;
+     static const unsigned int MACHINE = RISCV;
+-    static const unsigned int MODEL = SiFive_E;
++    static const unsigned int MODEL = SiFive_U;
+     static const unsigned int CPUS = 1;
+     static const unsigned int NODES = 1; // (> 1 => NETWORKING)
+     static const unsigned int EXPECTED_SIMULATION_TIME = 60; // s (0 => not simulated)
+diff --git a/include/architecture/mmu.h b/include/architecture/mmu.h
+index f5396db..be3bc08 100644
+--- a/include/architecture/mmu.h
++++ b/include/architecture/mmu.h
+@@ -49,6 +49,7 @@ public:
+             CT   = 1 << 7, // Contiguous (0=non-contiguous, 1=contiguous)
+             IO   = 1 << 8, // Memory Mapped I/O (0=memory, 1=I/O)
+             SYS  = (PRE | RD | RW | EX),
++            FLASH= (PRE | RD | RW | EX),
+             APP  = (PRE | RD | RW | EX | USR),
+             APPC = (PRE | RD | EX | USR),
+             APPD = (PRE | RD | RW | USR)
+diff --git a/include/architecture/rv32/rv32_mmu.h b/include/architecture/rv32/rv32_mmu.h
+index a3c638f..cd5f2e9 100644
+--- a/include/architecture/rv32/rv32_mmu.h
++++ b/include/architecture/rv32/rv32_mmu.h
+@@ -22,6 +22,7 @@ private:
+     static const unsigned int APP_LOW = Memory_Map::APP_LOW;
+     static const unsigned int PHY_MEM = Memory_Map::PHY_MEM;
+     static const unsigned int SYS = Memory_Map::SYS;
++    static const unsigned int FLASH = Memory_Map::FLASH_BASE;
+     static const unsigned int IO = Memory_Map::IO;
+ 
+ public:
+@@ -44,6 +45,7 @@ public:
+             APPC = (V | R | X | U),
+             APPD = (V | R | W | U),
+             SYS  = (V | R | W | X),
++            FLASH= (V | R | W | X),
+             IO   = (SYS | MIO),
+             DMA  = (SYS | CT),
+             MASK = (1 << 10) - 1
+diff --git a/include/machine.h b/include/machine.h
+index 13bef6f..498fda4 100644
+--- a/include/machine.h
++++ b/include/machine.h
+@@ -22,6 +22,9 @@
+ #ifdef __SCRATCHPAD_H
+ #include <machine/scratchpad.h>
+ #endif
++#ifdef __FLASH_H
++#include <machine/flash.h>
++#endif
+ #ifdef __UART_H
+ #include <machine/uart.h>
+ #endif
+diff --git a/include/machine/flash.h b/include/machine/flash.h
+new file mode 100644
+index 0000000..065d6cd
+--- /dev/null
++++ b/include/machine/flash.h
+@@ -0,0 +1,46 @@
++// EPOS Flash Memory Mediator Declarations
++
++#ifndef __flash_h
++#define __flash_h
++
++#include <utility/heap.h>
++#include <memory.h>
++
++__BEGIN_SYS
++
++// TODO: This design is a bit weird, since this is not a Common package (it's a base indeed). It could be refactored to have an "Engine" or to just leave ::init() to be implemented by each Machine
++class Flash_Base
++{
++    friend class System;
++
++    friend void * ::operator new(size_t, const EPOS::Flash_Allocator &);
++    friend void * ::operator new[](size_t, const EPOS::Flash_Allocator &);
++
++protected:
++    Flash_Base() {}
++
++public:
++    static void * alloc(unsigned int bytes) { return _heap->alloc(bytes); }
++
++public:
++    static Segment * _segment;
++    static Heap * _heap;
++};
++
++__END_SYS
++
++#endif
++
++#if defined(__FLASH_H) && !defined(__flash_common_only__)
++#include __FLASH_H
++
++inline void * operator new(size_t bytes, const EPOS::Flash_Allocator & allocator) {
++    return _SYS::Flash::_heap->alloc(bytes);
++}
++
++inline void * operator new[](size_t bytes, const EPOS::Flash_Allocator & allocator) {
++    return _SYS::Flash::_heap->alloc(bytes);
++}
++
++#endif
++
+diff --git a/include/machine/riscv/riscv_flash.h b/include/machine/riscv/riscv_flash.h
+new file mode 100644
+index 0000000..d1ba90f
+--- /dev/null
++++ b/include/machine/riscv/riscv_flash.h
+@@ -0,0 +1,29 @@
++// EPOS PC Flash Memory Mediator Declarations
++
++#ifndef __riscv_flash_h
++#define __riscv_flash_h
++
++#define __flash_common_only__
++#include <machine/flash.h>
++#undef __flash_common_only__
++
++__BEGIN_SYS
++
++class Flash: public Flash_Base
++{
++    friend class Machine;
++
++private:
++    static const unsigned int ADDRESS = Traits<Flash>::ADDRESS;
++    static const unsigned int SIZE = Traits<Flash>::SIZE;
++
++public:
++    Flash() {}
++
++private:
++    static void init();
++};
++
++__END_SYS
++
++#endif
+diff --git a/include/machine/riscv/riscv_uart.h b/include/machine/riscv/riscv_uart.h
+index 039bc38..f1b5413 100644
+--- a/include/machine/riscv/riscv_uart.h
++++ b/include/machine/riscv/riscv_uart.h
+@@ -213,7 +213,7 @@ private:
+     static volatile CPU::Reg8 & reg(unsigned int o) { return reinterpret_cast<volatile CPU::Reg8 *>(Memory_Map::UART0_BASE)[o / sizeof(CPU::Reg8)]; }
+ };
+ 
+-class UART: private UART_Common, private IF<Traits<Build>::MODEL == Traits<Build>::SiFive_E, SiFive_UART, NS16500A>::Result
++class UART: private UART_Common, private IF<Traits<Build>::MODEL == Traits<Build>::SiFive_U, SiFive_UART, NS16500A>::Result
+ {
+ private:
+     static const unsigned int UNIT = Traits<UART>::DEF_UNIT;
+@@ -222,7 +222,7 @@ private:
+     static const unsigned int PARITY = Traits<UART>::DEF_PARITY;
+     static const unsigned int STOP_BITS = Traits<UART>::DEF_STOP_BITS;
+ 
+-    typedef IF<Traits<Build>::MODEL == Traits<Build>::SiFive_E, SiFive_UART, NS16500A>::Result Engine;
++    typedef IF<Traits<Build>::MODEL == Traits<Build>::SiFive_U, SiFive_UART, NS16500A>::Result Engine;
+ 
+ public:
+     using UART_Common::NONE;
+diff --git a/include/machine/riscv/sifive_e/sifive_e_memory_map.h b/include/machine/riscv/sifive_e/sifive_e_memory_map.h
+index d690d03..dd63411 100644
+--- a/include/machine/riscv/sifive_e/sifive_e_memory_map.h
++++ b/include/machine/riscv/sifive_e/sifive_e_memory_map.h
+@@ -42,7 +42,7 @@ public:
+         PWM1_BASE       = 0x10025000,   // SiFive-E GPIO
+         SPI2_BASE       = 0x10034000,   // SiFive-E SPI
+         PWM2_BASE       = 0x10035000,   // SiFive-E GPIO
+-        FLASH_BASE      = 0x20000000,   // SiFive-E XIP
++        FLASH_BASE      = 0x200040000,   // SiFive-E XIP
+ 
+         // Physical Memory at Boot
+         BOOT            = Traits<Machine>::BOOT,
+diff --git a/include/machine/riscv/sifive_e/sifive_e_traits.h b/include/machine/riscv/sifive_e/sifive_e_traits.h
+index de83f4e..df35f14 100644
+--- a/include/machine/riscv/sifive_e/sifive_e_traits.h
++++ b/include/machine/riscv/sifive_e/sifive_e_traits.h
+@@ -41,7 +41,7 @@ public:
+     static const unsigned int APP_DATA          = library ? APP_LOW : APP_CODE + 4 * 1024 * 1024;
+ 
+     static const unsigned int INIT              = library ? NOT_USED :0x80080000;       // RAM_BASE + 512 KB (will be part of the free memory at INIT)
+-    static const unsigned int PHY_MEM           = 0x20000000;                           // 512 MB (max 1536 MB of RAM)
++    static const unsigned int PHY_MEM           = 0x20200000;                           // 512 MB (max 1536 MB of RAM)
+     static const unsigned int IO                = 0x00000000;                           // 0 (max 512 MB of IO = MIO_TOP - MIO_BASE)
+     static const unsigned int SYS               = 0xff800000;                           // 4 GB - 8 MB
+ 
+@@ -99,6 +99,14 @@ template<> struct Traits<Scratchpad>: public Traits<Machine_Common>
+     static const bool enabled = true;
+ };
+ 
++template<> struct Traits<Flash>: public Traits<Machine_Common>
++{
++    static const bool enabled = false;
++    static const unsigned int ADDRESS = 0x20031123000;
++    static const unsigned int SIZE = 1024;
++};
++
++
+ __END_SYS
+ 
+ #endif
+diff --git a/include/machine/riscv/sifive_u/sifive_u_memory_map.h b/include/machine/riscv/sifive_u/sifive_u_memory_map.h
+index 188240e..dab6513 100644
+--- a/include/machine/riscv/sifive_u/sifive_u_memory_map.h
++++ b/include/machine/riscv/sifive_u/sifive_u_memory_map.h
+@@ -28,12 +28,22 @@ public:
+         FREE_TOP        = BOOT_STACK,
+ 
+         // Memory-mapped devices
+-        TEST_BASE       = 0x00100000, // SiFive test engine
+-        RTC_BASE        = 0x00101000, // Goldfish RTC
+-        UART0_BASE      = 0x10000000, // NS16550A UART
+-        CLINT_BASE      = 0x02000000, // SiFive CLINT
+-        TIMER_BASE      = 0x02004000, // CLINT Timer
+-        PLIIC_CPU_BASE  = 0x0c000000, // SiFive PLIC
++        BIOS_BASE       = 0x00001000,   // SiFive-E BIOS ROM
++        CLINT_BASE      = 0x02000000,   // SiFive CLINT
++        TIMER_BASE      = 0x02004000,   // CLINT Timer
++        PLIIC_CPU_BASE  = 0x0c000000,   // SiFive PLIC
++        AON_BASE        = 0x10000000,   // SiFive-E Always-On (AON) Domain (real-time stuff)
++        PRCI_BASE       = 0x10008000,   // SiFive-E Power, Reset, Clock, Interrupt
++        GPIO_BASE       = 0x10012000,   // SiFive-E GPIO
++        UART0_BASE      = 0x10010000,   // SiFive UART
++        SPI0_BASE       = 0x10014000,   // SiFive-E SPI
++        PWM0_BASE       = 0x10015000,   // SiFive-E GPIO
++        UART1_BASE      = 0x10023000,   // SiFive UART
++        SPI1_BASE       = 0x10034000,   // SiFive-E SPI
++        PWM1_BASE       = 0x10025000,   // SiFive-E GPIO
++        SPI2_BASE       = 0x10034000,   // SiFive-E SPI
++        PWM2_BASE       = 0x10035000,   // SiFive-E GPIO
++        FLASH_BASE      = 0x20000000,   // SiFive-E XIP
+ 
+         // Physical Memory at Boot
+         BOOT            = Traits<Machine>::BOOT,
+@@ -60,7 +70,7 @@ public:
+         SYS_DATA        = multitask ? SYS + 0x00103000 : NOT_USED,
+         SYS_STACK       = multitask ? SYS + 0x00200000 : NOT_USED,
+         SYS_HEAP        = multitask ? SYS + 0x00400000 : NOT_USED,
+-        SYS_HIGH        = multitask ? SYS + 0x007fffff : NOT_USED
++        SYS_HIGH        = multitask ? SYS + 0x007fffff : NOT_USED,
+     };
+ };
+ 
+diff --git a/include/machine/riscv/sifive_u/sifive_u_traits.h b/include/machine/riscv/sifive_u/sifive_u_traits.h
+index f1ce1e9..30dcd6c 100644
+--- a/include/machine/riscv/sifive_u/sifive_u_traits.h
++++ b/include/machine/riscv/sifive_u/sifive_u_traits.h
+@@ -95,6 +95,13 @@ template<> struct Traits<Scratchpad>: public Traits<Machine_Common>
+     static const bool enabled = true;
+ };
+ 
++template<> struct Traits<Flash>: public Traits<Machine_Common>
++{
++    static const bool enabled = true;
++    static const unsigned int ADDRESS = 0x20000000;
++    static const unsigned int SIZE = 1024;
++};
++
+ __END_SYS
+ 
+ #endif
+diff --git a/include/system/config.h b/include/system/config.h
+index 940e6ce..07088d7 100644
+--- a/include/system/config.h
++++ b/include/system/config.h
+@@ -171,6 +171,7 @@ namespace EPOS {
+ #define __riscv__
+ #define __TSC_H                 __HEADER_ARCH(tsc)
+ #define __PMU_H                 __HEADER_ARCH(pmu)
++#define __FLASH_H               __HEADER_MACH(flash)
+ 
+ #define __UART_H                __HEADER_MACH(uart)
+ #endif
+@@ -179,6 +180,7 @@ namespace EPOS {
+ #define __riscv__
+ #define __TSC_H                 __HEADER_ARCH(tsc)
+ #define __PMU_H                 __HEADER_ARCH(pmu)
++#define __FLASH_H               __HEADER_MACH(flash)
+ 
+ #define __UART_H                __HEADER_MACH(uart)
+ #endif
+diff --git a/include/system/traits.h b/include/system/traits.h
+index a9989aa..b0e30f8 100644
+--- a/include/system/traits.h
++++ b/include/system/traits.h
+@@ -58,6 +58,7 @@ class Serial_Display;
+ class Keyboard;
+ class Serial_Keyboard;
+ class Scratchpad;
++class Flash;
+ class Watchdog;
+ class GPIO;
+ class I2C;
+diff --git a/include/system/types.h b/include/system/types.h
+index 645c2df..425865b 100644
+--- a/include/system/types.h
++++ b/include/system/types.h
+@@ -10,6 +10,7 @@ __BEGIN_API
+ // Memory allocators
+ enum System_Allocator { SYSTEM };
+ enum Scratchpad_Allocator { SCRATCHPAD };
++enum Flash_Allocator { FLASH };
+ enum Color {
+     COLOR_0,  COLOR_1,  COLOR_2,  COLOR_3,  COLOR_4,  COLOR_5,  COLOR_6,  COLOR_7,
+     COLOR_8,  COLOR_9,  COLOR_10, COLOR_11, COLOR_12, COLOR_13, COLOR_14, COLOR_15,
+@@ -47,6 +48,9 @@ void * operator new[](size_t, const EPOS::System_Allocator &);
+ void * operator new(size_t, const EPOS::Scratchpad_Allocator &);
+ void * operator new[](size_t, const EPOS::Scratchpad_Allocator &);
+ 
++void * operator new(size_t, const EPOS::Flash_Allocator &);
++void * operator new[](size_t, const EPOS::Flash_Allocator &);
++
+ void * operator new(size_t, const EPOS::Color &);
+ void * operator new[](size_t, const EPOS::Color &);
+ 
+@@ -188,6 +192,7 @@ enum
+     RTC_ID,
+     EEPROM_ID,
+     SCRATCHPAD_ID,
++    FLASH_ID,
+     UART_ID,
+     DISPLAY_ID,
+     KEYBOARD_ID,
+@@ -217,6 +222,7 @@ template<> struct Type<PCI> { static const Type_Id ID = PCI_ID; };
+ template<> struct Type<Display> { static const Type_Id ID = DISPLAY_ID; };
+ template<> struct Type<Keyboard> { static const Type_Id ID = KEYBOARD_ID; };
+ template<> struct Type<Scratchpad> { static const Type_Id ID = SCRATCHPAD_ID; };
++template<> struct Type<Flash> { static const Type_Id ID = FLASH_ID; };
+ template<> struct Type<Ethernet> { static const Type_Id ID = NIC_ID; };
+ template<> struct Type<IEEE802_15_4> { static const Type_Id ID = NIC_ID; };
+ 
+diff --git a/makedefs b/makedefs
+index f122b3e..b1cd4a2 100644
+--- a/makedefs
++++ b/makedefs
+@@ -197,7 +197,7 @@ riscv_CC_FLAGS		:= -march=rv32gc -mabi=ilp32f -Wl, -mno-relax
+ riscv_AS_FLAGS		:= -march=rv32gc -mabi=ilp32f
+ riscv_LD_FLAGS		:= -m elf32lriscv_ilp32f --no-relax
+ riscv_EMULATOR		= qemu-system-riscv32 $(QEMU_DEBUG) -machine sifive_e -m $(MEM_SIZE)k -serial mon:stdio -bios none -nographic -no-reboot $(BOOT_ROM) -kernel 
+-riscv_DEBUGGER		:= $(COMP_PREFIX)gdb
++riscv_DEBUGGER		:= gdb-multiarch -ex "set architecture riscv:rv32"
+ riscv_FLASHER		:= 
+ riscv_MAGIC		:= --nmagic
+ riscv_CODE_NAME		:= .init
+@@ -215,9 +215,9 @@ else
+ riscv_CC_FLAGS      := -march=rv32gc -mabi=ilp32d -Wl, -mno-relax
+ riscv_AS_FLAGS      := -march=rv32gc -mabi=ilp32d
+ riscv_LD_FLAGS      := -m elf32lriscv_ilp32f --no-relax
+-riscv_EMULATOR     = qemu-system-riscv32 $(QEMU_DEBUG) -machine virt -cpu rv32 -smp $(CPUS) -m $(MEM_SIZE)k -serial mon:stdio -bios none -nographic -no-reboot $(BOOT_ROM) -kernel 
++riscv_EMULATOR     = qemu-system-riscv32 $(QEMU_DEBUG) -machine sifive_u -cpu rv32 -smp 2 -m $(MEM_SIZE)k -serial mon:stdio -bios none -nographic -no-reboot -kernel  
+ endif 
+-riscv_DEBUGGER		:= $(COMP_PREFIX)gdb
++riscv_DEBUGGER		:= gdb-multiarch -ex "set architecture riscv:rv32"
+ riscv_FLASHER		:= 
+ riscv_MAGIC		:= --nmagic
+ riscv_CODE_NAME		:= .init
+diff --git a/src/init/init_system.cc b/src/init/init_system.cc
+index 91d4f9c..f2c8b55 100644
+--- a/src/init/init_system.cc
++++ b/src/init/init_system.cc
+@@ -31,7 +31,7 @@ public:
+             else
+                 heap = Address_Space(MMU::current()).attach(System::_heap_segment, Memory_Map::SYS_HEAP);
+             if(!heap)
+-                db<Init>(ERR) << "failed!" << endl;
++                db<Init>(ERR) << "System heap failed!" << endl;
+             System::_heap = new (&System::_preheap[sizeof(Segment)]) Heap(heap, System::_heap_segment->size());
+         } else
+             System::_heap = new (&System::_preheap[0]) Heap(MMU::alloc(MMU::pages(HEAP_SIZE)), HEAP_SIZE);
+diff --git a/src/machine/common/flash_common.cc b/src/machine/common/flash_common.cc
+new file mode 100644
+index 0000000..6f60d1f
+--- /dev/null
++++ b/src/machine/common/flash_common.cc
+@@ -0,0 +1,12 @@
++// EPOS Flash Memory Implementation
++
++#include <utility/heap.h>
++#include <memory.h>
++#include <machine/flash.h>
++
++__BEGIN_SYS
++
++Segment * Flash_Base::_segment;
++Heap * Flash_Base::_heap;
++
++__END_SYS
+diff --git a/src/machine/riscv/riscv_flash_init.cc b/src/machine/riscv/riscv_flash_init.cc
+new file mode 100644
+index 0000000..d49a8de
+--- /dev/null
++++ b/src/machine/riscv/riscv_flash_init.cc
+@@ -0,0 +1,17 @@
++// EPOS PC Flash Memory Initialization
++
++#include <machine/flash.h>
++#include <system.h>
++#include <memory.h>
++
++__BEGIN_SYS
++
++void Flash::init()
++{
++    db<Init, Flash>(TRC) << "Flash::init(a=" << CPU::Phy_Addr(ADDRESS) << ",s=" << SIZE << ")" << endl;
++
++    _segment = new (SYSTEM) Segment(CPU::Phy_Addr(ADDRESS), SIZE, MMU::Flags::FLASH);
++    _heap = new (SYSTEM) Heap(Address_Space(MMU::current()).attach(_segment, ADDRESS), _segment->size());
++}
++
++__END_SYS
+diff --git a/src/machine/riscv/riscv_machine.cc b/src/machine/riscv/riscv_machine.cc
+index 2f7e27b..a719a2e 100644
+--- a/src/machine/riscv/riscv_machine.cc
++++ b/src/machine/riscv/riscv_machine.cc
+@@ -23,15 +23,8 @@ void Machine::reboot()
+     if(Traits<System>::reboot) {
+         db<Machine>(WRN) << "Machine::reboot()" << endl;
+ 
+-#ifdef __sifive_e__
+         CPU::Reg * reset = reinterpret_cast<CPU::Reg *>(Memory_Map::AON_BASE);
+         reset[0] = 0x5555;
+-#endif
+-
+-#if defined(__sifive_u__) && defined(__rv32__)
+-        CPU::Reg * reset = reinterpret_cast<CPU::Reg *>(Memory_Map::TEST_BASE);
+-        reset[0] = 0x5555;
+-#endif
+ 
+         while(true);
+     } else {
+@@ -43,15 +36,8 @@ void Machine::poweroff()
+ {
+     db<Machine>(WRN) << "Machine::poweroff()" << endl;
+ 
+-#ifdef __sifive_e__
+         CPU::Reg * reset = reinterpret_cast<CPU::Reg *>(Memory_Map::AON_BASE);
+         reset[0] = 0x5555;
+-#endif
+-
+-#if defined(__sifive_u__) && defined(__rv32__)
+-        CPU::Reg * reset = reinterpret_cast<CPU::Reg *>(Memory_Map::TEST_BASE);
+-        reset[0] = 0x5555;
+-#endif
+ 
+     while(true);
+ }
+diff --git a/src/machine/riscv/riscv_machine_init.cc b/src/machine/riscv/riscv_machine_init.cc
+index 1c08646..d146d74 100644
+--- a/src/machine/riscv/riscv_machine_init.cc
++++ b/src/machine/riscv/riscv_machine_init.cc
+@@ -21,6 +21,10 @@ void Machine::init()
+ 
+     if(Traits<Timer>::enabled)
+         Timer::init();
++#ifdef __FLASH_H
++    if(Traits<Flash>::enabled)
++        Flash::init();
++#endif
+ }
+ 
+ __END_SYS
+diff --git a/tools/eposcfg/eposcfg.cc b/tools/eposcfg/eposcfg.cc
+index 2fbfa3a..da5577b 100644
+--- a/tools/eposcfg/eposcfg.cc
++++ b/tools/eposcfg/eposcfg.cc
+@@ -23,7 +23,7 @@ using namespace EPOS::S::U;
+ 
+ // Constants
+ const unsigned int TOKENS = 31;
+-const unsigned int COMPONENTS = 62;
++const unsigned int COMPONENTS = 63;
+ const unsigned int STRING_SIZE = 128;
+ 
+ // Configuration tokens (integer tokens first, marked by INT_TOKENS)
+@@ -82,6 +82,7 @@ char components[COMPONENTS][STRING_SIZE] = {
+     "Keyboard",
+     "Serial_Keyboard",
+     "Scratchpad",
++    "Flash",
+     "GPIO",
+     "I2C",
+     "ADC",
+@@ -369,6 +370,7 @@ void populate_strings()
+     if(Traits<Keyboard>::enabled)       enable_component("Keyboard");
+     if(Traits<Serial_Keyboard>::enabled)enable_component("Serial_Keyboard");
+     if(Traits<Scratchpad>::enabled)     enable_component("Scratchpad");
++    if(Traits<Flash>::enabled)          enable_component("Flash");
+     if(Traits<GPIO>::enabled)           enable_component("GPIO");
+     if(Traits<I2C>::enabled)            enable_component("I2C");
+     if(Traits<ADC>::enabled)            enable_component("ADC");

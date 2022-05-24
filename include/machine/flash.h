@@ -11,6 +11,8 @@ __BEGIN_SYS
 // TODO: This design is a bit weird, since this is not a Common package (it's a base indeed). It could be refactored to have an "Engine" or to just leave ::init() to be implemented by each Machine
 class Flash_Base
 {
+    friend class System;
+
     friend void * ::operator new(size_t, const EPOS::Flash_Allocator &);
     friend void * ::operator new[](size_t, const EPOS::Flash_Allocator &);
 
@@ -20,7 +22,7 @@ protected:
 public:
     static void * alloc(unsigned int bytes) { return _heap->alloc(bytes); }
 
-protected:
+public:
     static Segment * _segment;
     static Heap * _heap;
 };

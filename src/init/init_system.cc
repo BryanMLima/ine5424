@@ -5,7 +5,6 @@
 #include <memory.h>
 #include <system.h>
 #include <process.h>
-// #include <include/machine/flash.h>
 
 __BEGIN_SYS
 
