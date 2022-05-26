@@ -48,7 +48,7 @@ public:
 
         Element * e = search_decrementing(bytes);
         if(!e) {
-            out_of_memory();
+            out_of_memory(bytes);
             return 0;
         }
 
@@ -87,7 +87,7 @@ public:
     }
 
 private:
-    void out_of_memory();
+    void out_of_memory(unsigned int bytes);
 };
 
 __END_UTIL

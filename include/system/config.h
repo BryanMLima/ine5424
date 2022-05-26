@@ -71,11 +71,6 @@ namespace EPOS {
 //============================================================================
 // CONFIGURATION
 //============================================================================
-#include <system/meta.h>
-#include <system/traits.h>
-#include __APPLICATION_TRAITS_H
-#include <system/types.h>
-
 #define __CPU_H                 __HEADER_ARCH(cpu)
 #define __MMU_H                 __HEADER_ARCH(mmu)
 
@@ -182,6 +177,11 @@ namespace EPOS {
 
 #define __UART_H                __HEADER_MACH(uart)
 #endif
+
+#include <system/meta.h>
+#include <system/traits.h>
+#include __APPLICATION_TRAITS_H
+#include <system/types.h>
 
 //============================================================================
 // THINGS EVERBODY NEEDS

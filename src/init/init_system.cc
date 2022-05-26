@@ -11,7 +11,7 @@ __BEGIN_SYS
 class Init_System
 {
 private:
-    static const unsigned int HEAP_SIZE = Traits<System>::multiheap ? Traits<Machine>::HEAP_SIZE : Traits<System>::HEAP_SIZE;
+    static const unsigned int HEAP_SIZE = Traits<System>::HEAP_SIZE;
 
 public:
     Init_System() {
@@ -31,7 +31,7 @@ public:
             else
                 heap = Address_Space(MMU::current()).attach(System::_heap_segment, Memory_Map::SYS_HEAP);
             if(!heap)
-                db<Init>(ERR) << "failed!" << endl;
+                db<Init>(ERR) << "Failed to initialize the system's heap!" << endl;
             System::_heap = new (&System::_preheap[sizeof(Segment)]) Heap(heap, System::_heap_segment->size());
         } else
             System::_heap = new (&System::_preheap[0]) Heap(MMU::alloc(MMU::pages(HEAP_SIZE)), HEAP_SIZE);
