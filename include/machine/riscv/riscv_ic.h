@@ -164,7 +164,7 @@ private:
 
     static void init();
 
-    static volatile CPU::Reg32 & reg(unsigned int o) { return reinterpret_cast<volatile CPU::Reg32 *>(Memory_Map::CLINT_BASE)[o / sizeof(CPU::Reg32)]; }
+    static volatile CPU::Reg64 & reg(unsigned int o) { return reinterpret_cast<volatile CPU::Reg64 *>(Memory_Map::CLINT_BASE)[o / sizeof(CPU::Reg64)]; }
 
 private:
     static Interrupt_Handler _int_vector[INTS];

@@ -33,7 +33,7 @@ public:
         UART0_BASE      = 0x10013000,   // SiFive UART
         SPI0_BASE       = 0x10014000,   // SiFive-E SPI
         PWM0_BASE       = 0x10015000,   // SiFive-E GPIO
-        UART1_BASE      = 0x10023000,   // SiFive UART
+        UART1_BASE      = 0x10010000,   // SiFive UART
         SPI1_BASE       = 0x10034000,   // SiFive-E SPI
         PWM1_BASE       = 0x10025000,   // SiFive-E GPIO
         SPI2_BASE       = 0x10034000,   // SiFive-E SPI

@@ -10,38 +10,38 @@ unsigned int CPU::_bus_clock;
 
 void CPU::Context::save() volatile
 {
-    ASM("       sw       x1,    0(a0)           \n"     // push RA as PC
-        "       csrr     x3,  mstatus           \n"
-        "       sw       x3,    4(a0)           \n"     // push ST
-        "       sw       x1,    8(a0)           \n"     // push RA
-        "       sw       x5,   12(a0)           \n"     // push x5-x31
-        "       sw       x6,   16(a0)           \n"
-        "       sw       x7,   20(a0)           \n"
-        "       sw       x8,   24(a0)           \n"
-        "       sw       x9,   28(a0)           \n"
-        "       sw      x10,   32(a0)           \n"
-        "       sw      x11,   36(a0)           \n"
-        "       sw      x12,   40(a0)           \n"
-        "       sw      x13,   44(a0)           \n"
-        "       sw      x14,   48(a0)           \n"
-        "       sw      x15,   52(a0)           \n"
-        "       sw      x16,   56(a0)           \n"
-        "       sw      x17,   60(a0)           \n"
-        "       sw      x18,   64(a0)           \n"
-        "       sw      x19,   68(a0)           \n"
-        "       sw      x20,   72(a0)           \n"
-        "       sw      x21,   76(a0)           \n"
-        "       sw      x22,   80(a0)           \n"
-        "       sw      x23,   84(a0)           \n"
-        "       sw      x24,   88(a0)           \n"
-        "       sw      x25,   92(a0)           \n"
-        "       sw      x26,   96(a0)           \n"
-        "       sw      x27,  100(a0)           \n"
-        "       sw      x28,  104(a0)           \n"
-        "       sw      x29,  108(a0)           \n"
-        "       sw      x30,  112(a0)           \n"
-        "       sw      x31,  116(a0)           \n"
-        "       ret                             \n");
+    ASM("       sd       x1,     0(a0)           \n");     // push RA as PC
+    ASM("       csrr     x3,   mstatus           \n");
+    ASM("       sd       x3,     8(sp)           \n");     // push ST
+    ASM("       sd       x1,    16(sp)           \n");     // push RA
+    ASM("       sd       x5,    24(sp)           \n");     // push x5-x31
+    ASM("       sd       x6,    32(sp)           \n");
+    ASM("       sd       x7,    40(sp)           \n");
+    ASM("       sd       x8,    48(sp)           \n");
+    ASM("       sd       x9,    56(sp)           \n");
+    ASM("       sd      x10,    64(sp)           \n");
+    ASM("       sd      x11,    72(sp)           \n");
+    ASM("       sd      x12,    80(sp)           \n");
+    ASM("       sd      x13,    88(sp)           \n");
+    ASM("       sd      x14,    96(sp)           \n");
+    ASM("       sd      x15,   104(sp)           \n");
+    ASM("       sd      x16,   112(sp)           \n");
+    ASM("       sd      x17,   120(sp)           \n");
+    ASM("       sd      x18,   128(sp)           \n");
+    ASM("       sd      x19,   136(sp)           \n");
+    ASM("       sd      x20,   144(sp)           \n");
+    ASM("       sd      x21,   152(sp)           \n");
+    ASM("       sd      x22,   160(sp)           \n");
+    ASM("       sd      x23,   168(sp)           \n");
+    ASM("       sd      x24,   176(sp)           \n");
+    ASM("       sd      x25,   184(sp)           \n");
+    ASM("       sd      x26,   192(sp)           \n");
+    ASM("       sd      x27,   200(sp)           \n");
+    ASM("       sd      x28,   208(sp)           \n");
+    ASM("       sd      x29,   216(sp)           \n");
+    ASM("       sd      x30,   224(sp)           \n");
+    ASM("       sd      x31,   232(sp)           \n");
+    ASM("       ret                              \n");
 }
 
 // Context load does not verify if interrupts were previously enabled by the Context's constructor
@@ -57,7 +57,7 @@ void CPU::switch_context(Context ** o, Context * n)     // "o" is in a0 and "n" 
 {   
     // Push the context into the stack and update "o"
     Context::push();
-    ASM("sw sp, 0(a0)");   // update Context * volatile * o, which is in a0
+    ASM("sd sp, 0(a0)");   // update Context * volatile * o, which is in a0
 
     // Set the stack pointer to "n" and pop the context from the stack
     ASM("mv sp, a1");   // "n" is in a1
