@@ -430,7 +430,7 @@ if(interrupt) {
     ASM("       sd       x1,    0(sp)           \n");   // push RA as PC on context switches
 }
     ASM("       csrr     x3,  mstatus            \n");
-    ASM("       sw       x3,     8(sp)           \n");     // push ST
+    ASM("       sd       x3,     8(sp)           \n");     // push ST
     ASM("       sd       x1,    16(sp)           \n");     // push RA
     ASM("       sd       x5,    24(sp)           \n");     // push x5-x31
     ASM("       sd       x6,    32(sp)           \n");
