@@ -429,36 +429,36 @@ if(interrupt) {
 } else {
     ASM("       sd       x1,    0(sp)           \n");   // push RA as PC on context switches
 }
-    ASM("       csrr     x3,  mstatus            \n");
-    ASM("       sd       x3,     8(sp)           \n");     // push ST
-    ASM("       sd       x1,    16(sp)           \n");     // push RA
-    ASM("       sd       x5,    24(sp)           \n");     // push x5-x31
-    ASM("       sd       x6,    32(sp)           \n");
-    ASM("       sd       x7,    40(sp)           \n");
-    ASM("       sd       x8,    48(sp)           \n");
-    ASM("       sd       x9,    56(sp)           \n");
-    ASM("       sd      x10,    64(sp)           \n");
-    ASM("       sd      x11,    72(sp)           \n");
-    ASM("       sd      x12,    80(sp)           \n");
-    ASM("       sd      x13,    88(sp)           \n");
-    ASM("       sd      x14,    96(sp)           \n");
-    ASM("       sd      x15,   104(sp)           \n");
-    ASM("       sd      x16,   112(sp)           \n");
-    ASM("       sd      x17,   120(sp)           \n");
-    ASM("       sd      x18,   128(sp)           \n");
-    ASM("       sd      x19,   136(sp)           \n");
-    ASM("       sd      x20,   144(sp)           \n");
-    ASM("       sd      x21,   152(sp)           \n");
-    ASM("       sd      x22,   160(sp)           \n");
-    ASM("       sd      x23,   168(sp)           \n");
-    ASM("       sd      x24,   176(sp)           \n");
-    ASM("       sd      x25,   184(sp)           \n");
-    ASM("       sd      x26,   192(sp)           \n");
-    ASM("       sd      x27,   200(sp)           \n");
-    ASM("       sd      x28,   208(sp)           \n");
-    ASM("       sd      x29,   216(sp)           \n");
-    ASM("       sd      x30,   224(sp)           \n");
-    ASM("       sd      x31,   232(sp)           \n");
+    ASM("       csrr     x3,  mstatus            \n"
+        "       sd       x3,     8(sp)           \n"     // push ST
+        "       sd       x1,    16(sp)           \n"     // push RA
+        "       sd       x5,    24(sp)           \n"     // push x5-x31
+        "       sd       x6,    32(sp)           \n"
+        "       sd       x7,    40(sp)           \n"
+        "       sd       x8,    48(sp)           \n"
+        "       sd       x9,    56(sp)           \n"
+        "       sd      x10,    64(sp)           \n"
+        "       sd      x11,    72(sp)           \n"
+        "       sd      x12,    80(sp)           \n"
+        "       sd      x13,    88(sp)           \n"
+        "       sd      x14,    96(sp)           \n"
+        "       sd      x15,   104(sp)           \n"
+        "       sd      x16,   112(sp)           \n"
+        "       sd      x17,   120(sp)           \n"
+        "       sd      x18,   128(sp)           \n"
+        "       sd      x19,   136(sp)           \n"
+        "       sd      x20,   144(sp)           \n"
+        "       sd      x21,   152(sp)           \n"
+        "       sd      x22,   160(sp)           \n"
+        "       sd      x23,   168(sp)           \n"
+        "       sd      x24,   176(sp)           \n"
+        "       sd      x25,   184(sp)           \n"
+        "       sd      x26,   192(sp)           \n"
+        "       sd      x27,   200(sp)           \n"
+        "       sd      x28,   208(sp)           \n"
+        "       sd      x29,   216(sp)           \n"
+        "       sd      x30,   224(sp)           \n"
+        "       sd      x31,   232(sp)           \n");
 }
 
 inline void CPU::Context::pop(bool interrupt)
