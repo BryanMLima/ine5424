@@ -309,8 +309,6 @@ private:
             break;
         case 1:
             reg = TSC::time_stamp();
-            // ASM("rdtime  %0" : "=r"(reg) : );
-            // ASM("csrr %0, mtime"  : "=r"(reg) : );
             break;
         case 2:
             ASM("rdinstret  %0" : "=r"(reg) : );
