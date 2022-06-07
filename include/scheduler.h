@@ -145,6 +145,18 @@ public:
     FCFS(int p = NORMAL, Tn & ... an);
 };
 
+class BRI: public Priority
+{
+public:
+    static const bool timed = false;
+    static const bool dynamic = true;
+    static const bool preemptive = false;
+
+public:
+    template <typename ... Tn>
+    BRI(int p = NORMAL, Tn & ... an);
+};
+
 __END_SYS
 
 #endif
