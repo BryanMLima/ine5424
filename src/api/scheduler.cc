@@ -9,6 +9,11 @@ __BEGIN_SYS
 template <typename ... Tn>
 FCFS::FCFS(int p, Tn & ... an): Priority((p == IDLE) ? IDLE : Alarm::elapsed()) {}
 
+void BRI::update() {
+    if((_priority > HIGH) && (_priority <= NORMAL))
+        _priority--;
+}
+
 // Since the definition above is only known to this unit, forcing its instantiation here so it gets emitted in scheduler.o for subsequent linking with other units is necessary.
 template FCFS::FCFS<>(int p);
 

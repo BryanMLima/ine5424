@@ -109,7 +109,7 @@ protected:
     static void reschedule();
     static void time_slicer(IC::Interrupt_Id interrupt);
 
-    static void dispatch(Thread * prev, Thread * next, bool charge = true);
+    static void dispatch(Thread * prev, Thread * next, bool charge = true, bool award = false);
 
     static int idle();
 

@@ -114,6 +114,8 @@ public:
     Priority(int p = NORMAL, Tn & ... an): _priority(p) {}
 
     operator const volatile int() const volatile { return _priority; }
+    // operator const volatile int() const volatile { return _priority; }
+    int operator-=(Priority p) { return int(p) - 1; }
 
 protected:
     volatile int _priority;
@@ -136,7 +138,7 @@ public:
 class FCFS: public Priority
 {
 public:
-    static const bool timed = false;
+    static const bool timed = true;
     static const bool dynamic = false;
     static const bool preemptive = false;
 
@@ -148,13 +150,15 @@ public:
 class BRI: public Priority
 {
 public:
-    static const bool timed = false;
-    static const bool dynamic = true;
+    static const bool timed = true;
+    static const bool dynamic = false;
     static const bool preemptive = false;
 
 public:
     template <typename ... Tn>
-    BRI(int p = NORMAL, Tn & ... an);
+    BRI(int p = NORMAL, Tn & ... an): Priority(p) {};
+
+    void update();
 };
 
 __END_SYS

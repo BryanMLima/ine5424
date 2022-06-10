@@ -246,7 +246,7 @@ void Thread::exit(int status)
 
 void Thread::sleep(Queue * q)
 {
-    db<Thread>(TRC) << "Thread::sleep(running=" << running() << ",q=" << q << ")" << endl;
+    // db<Thread>(WRN) << "Thread::sleep(running=" << running() << ",q=" << q << ")" << endl;
 
     assert(locked()); // locking handled by caller
 
@@ -258,7 +258,7 @@ void Thread::sleep(Queue * q)
 
     Thread * next = _scheduler.chosen();
 
-    dispatch(prev, next);
+    dispatch(prev, next, true, true);
 }
 
 
@@ -322,13 +322,22 @@ void Thread::time_slicer(IC::Interrupt_Id i)
 }
 
 
-void Thread::dispatch(Thread * prev, Thread * next, bool charge)
+void Thread::dispatch(Thread * prev, Thread * next, bool charge, bool award)
 {
     // "next" is not in the scheduler's queue anymore. It's already "chosen"
 
     if(charge) {
+        db<Thread>(WRN) << "Thread : " << next << " Before priority: " << next->link()->rank() << endl;
+        next->criterion().update();
+        db<Thread>(WRN) << "Thread : " << next << " After  priority: " << next->link()->rank() << endl;
         if(Criterion::timed)
             _timer->restart();
+    }
+
+    if (award) {
+        // db<Thread>(WRN) << "Thread : " << next << " Before priority: " << next->link()->rank() << endl;
+        // next->criterion().update();
+        // db<Thread>(WRN) << "Thread : " << next << " After  priority: " << next->link()->rank() << endl;
     }
 
     if(prev != next) {

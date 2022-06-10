@@ -105,6 +105,7 @@ class RR;
 class RM;
 class DM;
 class EDF;
+class BRI;
 class GRR;
 class Fixed_CPU;
 class CPU_Affinity;
