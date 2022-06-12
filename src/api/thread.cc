@@ -333,7 +333,6 @@ void Thread::dispatch(Thread * prev, Thread * next, bool charge, bool award)
 
     if (award) {
         prev->criterion().update();
-        prev->priority();
     }
 
     if(prev != next) {

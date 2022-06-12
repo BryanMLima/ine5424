@@ -7,7 +7,7 @@
 
 using namespace EPOS;
 
-Thread * thread[2];
+Thread * thread[6];
 
 OStream cout;
 
@@ -20,13 +20,17 @@ int main()
 
     thread[0] = new Thread(&cpuBoundFunc);
     thread[1] = new Thread(&ioBoundFunc);
+    thread[2] = new Thread(&cpuBoundFunc);
+    thread[3] = new Thread(&ioBoundFunc);
+    thread[4] = new Thread(&cpuBoundFunc);
+    thread[5] = new Thread(&ioBoundFunc);
 
     cout << "Threads created..." << endl;
 
-    for(int i = 0; i < 2; i++) {
+    for(int i = 0; i < 6; i++) {
         thread[i]->join();
 
-        if (i == 1)
+        if (i % 2 == 1)
             cout << "IO Bound Thread " << thread[i] << " finished with priority: " << thread[i]->priority()<< endl;
         else 
             cout << "CPU Bound Thread " << thread[i] << " finished with priority: " << thread[i]->priority()<< endl;
