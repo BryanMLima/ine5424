@@ -114,7 +114,6 @@ public:
     Priority(int p = NORMAL, Tn & ... an): _priority(p) {}
 
     operator const volatile int() const volatile { return _priority; }
-    // operator const volatile int() const volatile { return _priority; }
     int operator-=(Priority p) { return int(p) - 1; }
 
 protected:
@@ -151,7 +150,7 @@ class BRI: public Priority
 {
 public:
     static const bool timed = true;
-    static const bool dynamic = false;
+    static const bool dynamic = true; // Is not used in our implementation anyway
     static const bool preemptive = false;
 
 public:

@@ -7,66 +7,67 @@
 
 using namespace EPOS;
 
-const int iterations = 10;
-
-Mutex table;
-
-Thread * phil[2];
+Thread * thread[2];
 
 OStream cout;
 
-int func1();
-int func2();
+int cpuBoundFunc();
+int ioBoundFunc();
 
 int main()
 {
-    // table.lock();
-    _print("teste");
+    cout << "Scheduler test" << endl;
 
-    cout << "P1:" << endl;
+    thread[0] = new Thread(&cpuBoundFunc);
+    thread[1] = new Thread(&ioBoundFunc);
 
-    phil[0] = new Thread(&func1);
-    phil[1] = new Thread(&func2);
-
-    cout << "The dinner is served ..." << endl;
-    // table.unlock();
+    cout << "Threads created..." << endl;
 
     for(int i = 0; i < 2; i++) {
-        phil[i]->join();
-        // table.lock();
-        cout << " Thread " << phil[i] << "Finished" << endl;
-        // table.unlock();
+        thread[i]->join();
+
+        if (i == 1)
+            cout << "IO Bound Thread " << thread[i] << " finished with priority: " << thread[i]->priority()<< endl;
+        else 
+            cout << "CPU Bound Thread " << thread[i] << " finished with priority: " << thread[i]->priority()<< endl;
     }
 
     for(int i = 0; i < 2; i++)
-        delete phil[i];
+        delete thread[i];
 
     cout << "The end!" << endl;
 
     return 0;
 }
 
-int func2()
+int cpuBoundFunc()
 {
-    for (size_t i = 0; i < 10000; i++)
+    int n1 = 0, n2 = 1, result;
+    for (size_t i = 0; i < 30000; i++)
     {
-        // table.lock();
-        _print("Func 2\n");
-        // table.unlock();
+        if (i <= 1)
+            result = i;
+        else {
+            result = n1 + n2;
+            n1 = n2;
+            n2 = result;
+        }
     }
+
+    cout << "Fibonacci of " << 10 << " is " << result << endl;
     return 0;
 }
 
-int func1()
+int ioBoundFunc()
 {
-    int a = 0;
-    for (size_t i = 0; i < 10000; i++)
+    for (size_t i = 0; i < 4; i++)
     {
-        // table.lock();
-        a++;
-        a--;
-        // _print("Func 1");
-        // table.unlock();
+        cout << "IO bound process | Getting data from disk... " << endl;
+
+        Alarm::delay(10000);
+
+        cout << "IO bound process | Done getting data. " << endl;
     }
+
     return 0;
 }
