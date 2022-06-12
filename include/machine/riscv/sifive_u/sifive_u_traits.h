@@ -81,7 +81,7 @@ template <> struct Traits<UART>: public Traits<Machine_Common>
 
 template<> struct Traits<Serial_Display>: public Traits<Machine_Common>
 {
-    static const bool enabled = true;
+    static const bool enabled = (Traits<Build>::EXPECTED_SIMULATION_TIME != 0);
     static const int ENGINE = UART;
     static const int UNIT = 1;
     static const int COLUMNS = 80;

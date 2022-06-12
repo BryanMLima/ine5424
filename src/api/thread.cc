@@ -246,6 +246,8 @@ void Thread::exit(int status)
 
 void Thread::sleep(Queue * q)
 {
+    db<Thread>(TRC) << "Thread::sleep(running=" << running() << ",q=" << q << ")" << endl;
+
     assert(locked()); // locking handled by caller
 
     Thread * prev = running();

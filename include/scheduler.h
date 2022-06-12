@@ -137,7 +137,7 @@ public:
 class FCFS: public Priority
 {
 public:
-    static const bool timed = true;
+    static const bool timed = false;
     static const bool dynamic = false;
     static const bool preemptive = false;
 
@@ -150,7 +150,7 @@ class BRI: public Priority
 {
 public:
     static const bool timed = true;
-    static const bool dynamic = true; // Is not used in our implementation anyway
+    static const bool dynamic = true;
     static const bool preemptive = false;
 
 public:
