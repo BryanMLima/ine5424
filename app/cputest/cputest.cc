@@ -13,6 +13,20 @@ int main()
 
     {
         volatile bool lock = false;
+        // int a = 9;
+        // auto addr = (void *)&lock & 0x7;
+
+        // cout << &a << endl;
+        // auto b = align64(a);
+
+        // cout << b << endl;
+
+
+        // cout << (addr & 0x7) << endl;
+        // (void *) addr = &lock;
+        // volatile bool *p = &lock;
+        // cout << addressof(lock) << endl;
+        // cout << ((void *)&lock & 0x7) << endl;
         if(cpu.tsl(lock))
             cout << "tsl(): doesn't function properly!(1)" << endl;
         else
@@ -21,28 +35,28 @@ int main()
             else
                 cout << "tsl(): doesn't function properly!(2)" << endl;
     }
-    // {
-    //     volatile int number = 100;
-    //     volatile int tmp;
-    //     if((tmp = cpu.finc(number)) != 100)
-    //         cout << "finc(): doesn't function properly (n=" << tmp << ", should be 100)!" << endl;
-    //     else
-    //         if((tmp = cpu.finc(number)) != 101)
-    //             cout << "finc(): doesn't function properly (n=" << tmp << ", should be 101)!" << endl;
-    //         else
-    //             cout << "finc(): ok" << endl;
-    // }
-    // {
-    //     volatile int number = 100;
-    //     volatile int tmp;
-    //     if((tmp = cpu.fdec(number)) != 100)
-    //         cout << "fdec(): doesn't function properly (n=" << tmp << ", should be 100)!" << endl;
-    //     else
-    //         if((tmp = cpu.fdec(number)) != 99)
-    //             cout << "fdec(): doesn't function properly (n=" << tmp << ", should be 99)!" << endl;
-    //         else
-    //             cout << "fdec(): ok" << endl;
-    // }
+    {
+        volatile int number = 100;
+        volatile int tmp;
+        if((tmp = cpu.finc(number)) != 100)
+            cout << "finc(): doesn't function properly (n=" << tmp << ", should be 100)!" << endl;
+        else
+            if((tmp = cpu.finc(number)) != 101)
+                cout << "finc(): doesn't function properly (n=" << tmp << ", should be 101)!" << endl;
+            else
+                cout << "finc(): ok" << endl;
+    }
+    {
+        volatile int number = 100;
+        volatile int tmp;
+        if((tmp = cpu.fdec(number)) != 100)
+            cout << "fdec(): doesn't function properly (n=" << tmp << ", should be 100)!" << endl;
+        else
+            if((tmp = cpu.fdec(number)) != 99)
+                cout << "fdec(): doesn't function properly (n=" << tmp << ", should be 99)!" << endl;
+            else
+                cout << "fdec(): ok" << endl;
+    }
     {
         volatile int number = 100;
         volatile int compare = number;

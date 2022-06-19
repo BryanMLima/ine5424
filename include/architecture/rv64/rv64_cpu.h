@@ -245,6 +245,7 @@ public:
 
     template<typename T>
     static T tsl(volatile T & lock) {
+        db<CPU>(WRN) << (lock & 0x7) << endl;
         register T old;
         register T one = 1;
         ASM("1: lr.d    %0, (%1)        \n"
