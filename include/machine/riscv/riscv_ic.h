@@ -160,7 +160,7 @@ private:
     static void exception(Interrupt_Id i);
 
     // Physical handler
-    static void entry() __attribute((naked, aligned(8)));
+    static void entry() __attribute((naked, aligned(4)));
 
     static void init();
 
