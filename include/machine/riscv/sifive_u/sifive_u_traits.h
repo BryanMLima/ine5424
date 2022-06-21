@@ -18,6 +18,7 @@ template<> struct Traits<Machine>: public Traits<Machine_Common>
 {
 public:
     static const unsigned int NOT_USED          = 0xffffffff;
+    static const unsigned int CPUS              = Traits<Build>::CPUS;
 
     // Physical Memory
     static const unsigned int RAM_BASE          = 0x80000000;                           // 2 GB
@@ -45,7 +46,7 @@ public:
     // Default Sizes and Quantities
     static const unsigned int MAX_THREADS       = 16;
     static const unsigned int STACK_SIZE        = 64 * 1024;
-    static const unsigned int HEAP_SIZE         = 1 * 1024 * 1024;
+     static const unsigned int HEAP_SIZE        = (MAX_THREADS + CPUS) * STACK_SIZE;    // threads (including idles for each CPU) are the largest objects allocated from the heap
 };
 
 template <> struct Traits<IC>: public Traits<Machine_Common>
@@ -58,7 +59,7 @@ template <> struct Traits<Timer>: public Traits<Machine_Common>
     static const bool debugged = hysterically_debugged;
 
     static const unsigned int UNITS = 1;
-    static const unsigned int CLOCK = 10000000;
+    static const unsigned int CLOCK = 1000000;
 
     // Meaningful values for the timer frequency range from 100 to 10000 Hz. The
     // choice must respect the scheduler time-slice, i. e., it must be higher

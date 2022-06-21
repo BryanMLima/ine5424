@@ -57,18 +57,21 @@ private:
 Setup::Setup()
 {
     CPU::int_disable(); // interrupts will be re-enabled at init_end
+    if(CPU::id() == 0) {
+        Display::init();
 
-    Display::init();
+        si = reinterpret_cast<System_Info *>(&__boot_time_system_info);
+        if(si->bm.n_cpus > Traits<Machine>::CPUS)
+            si->bm.n_cpus = Traits<Machine>::CPUS;
 
-    si = reinterpret_cast<System_Info *>(&__boot_time_system_info);
-    if(si->bm.n_cpus > Traits<Machine>::CPUS)
-        si->bm.n_cpus = Traits<Machine>::CPUS;
+        db<Setup>(TRC) << "Setup(si=" << reinterpret_cast<void *>(si) << ",sp=" << CPU::sp() << ")" << endl;
+        db<Setup>(INF) << "Setup:si=" << *si << endl;
 
-    db<Setup>(TRC) << "Setup(si=" << reinterpret_cast<void *>(si) << ",sp=" << CPU::sp() << ")" << endl;
-    db<Setup>(INF) << "Setup:si=" << *si << endl;
+        // Print basic facts about this EPOS instance
+        say_hi();
+    }
 
-    // Print basic facts about this EPOS instance
-    say_hi();
+    CPU::smp_barrier(Traits<Machine>::CPUS);
 
     // SETUP ends here, so let's transfer control to the next stage (INIT or APP)
     call_next();
@@ -116,7 +119,7 @@ void Setup::call_next()
     // Check for next stage and obtain the entry point
     Log_Addr pc = &_start;
 
-    db<Setup>(INF) << "SETUP ends here!" << endl;
+    db<Setup>(WRN) << "SETUP ends here!" << endl;
 
     // Call the next stage
     static_cast<void (*)()>(pc)();
@@ -131,14 +134,14 @@ using namespace EPOS::S;
 
 void _entry() // machine mode
 {
-    if(CPU::mhartid() != 0)                             // SiFive-U requires 2 cores, so we disable core 1 here
+    if(CPU::id() != 0)                             // SiFive-U requires 2 cores, so we disable core 1 here
         CPU::halt();
 
     CPU::mstatusc(CPU::MIE);                            // disable interrupts (they will be reenabled at Init_End)
     CPU::mies(CPU::MSI);                                // enable interrupts at CLINT so IPI and timer can be triggered
     CLINT::mtvec(CLINT::DIRECT, _int_entry);            // setup a preliminary machine mode interrupt handler pointing it to _int_entry
 
-    CPU::sp(Memory_Map::BOOT_STACK + Traits<Machine>::STACK_SIZE - sizeof(long)); // set this hart stack
+    CPU::sp(Memory_Map::BOOT_STACK + Traits<Machine>::STACK_SIZE * (CPU::id() + 1) - sizeof(long)); // set this hart stack (the first stack is reserved for _int_m2s
 
     Machine::clear_bss();
 

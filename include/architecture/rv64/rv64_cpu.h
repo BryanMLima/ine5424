@@ -222,9 +222,9 @@ public:
     static Reg fr() { Reg r; ASM("mv %0, a0" :  "=r"(r)); return r; }
     static void fr(Reg r) {  ASM("mv a0, %0" : : "r"(r) :); }
 
-    static unsigned int id() { return 0; }
+    static unsigned int id() { return mhartid(); }
 
-    static unsigned int cores() { return 1; }
+    static unsigned int cores() { return Traits<Machine>::CPUS; }
 
     using CPU_Common::clock;
     using CPU_Common::min_clock;
@@ -285,7 +285,7 @@ public:
         return old;
     }
 
-    static void smp_barrier(unsigned long cores = CPU::cores()) {}
+    static void smp_barrier(unsigned long cores = CPU::cores()) { CPU_Common::smp_barrier<&finc>(cores, id());}
 
     static void flush_tlb() {         ASM("sfence.vma"    : :           : "memory"); }
     static void flush_tlb(Reg addr) { ASM("sfence.vma %0" : : "r"(addr) : "memory"); }

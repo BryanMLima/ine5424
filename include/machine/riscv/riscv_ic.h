@@ -152,6 +152,8 @@ public:
         reg(MSIP + cpu * MSIP_CORE_OFFSET) = 1;
     }
 
+    static void ipi_eoi(Interrupt_Id i) { reg(MSIP + CPU::id() * MSIP_CORE_OFFSET) = 0; }
+
 private:
     static void dispatch();
 

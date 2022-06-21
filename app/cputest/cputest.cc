@@ -12,7 +12,7 @@ int main()
     CPU cpu;
 
     {
-        volatile bool lock = false;
+        // volatile bool lock = false;
         // int a = 9;
         // auto addr = (void *)&lock & 0x7;
 
@@ -27,13 +27,13 @@ int main()
         // volatile bool *p = &lock;
         // cout << addressof(lock) << endl;
         // cout << ((void *)&lock & 0x7) << endl;
-        if(cpu.tsl(lock))
-            cout << "tsl(): doesn't function properly!(1)" << endl;
-        else
-            if(cpu.tsl(lock))
-                cout << "tsl(): ok" << endl;
-            else
-                cout << "tsl(): doesn't function properly!(2)" << endl;
+        // if(cpu.tsl(lock))
+        //     cout << "tsl(): doesn't function properly!(1)" << endl;
+        // else
+        //     if(cpu.tsl(lock))
+        //         cout << "tsl(): ok" << endl;
+        //     else
+        //         cout << "tsl(): doesn't function properly!(2)" << endl;
     }
     {
         volatile int number = 100;

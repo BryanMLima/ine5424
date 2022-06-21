@@ -22,7 +22,7 @@ public:
         }
 
         if(Memory_Map::BOOT_STACK != Memory_Map::NOT_USED)
-            MMU::free(Memory_Map::BOOT_STACK, MMU::pages(Traits<Machine>::STACK_SIZE));
+            MMU::free(Memory_Map::BOOT_STACK, MMU::pages(Traits<Machine>::CPUS * Traits<Machine>::STACK_SIZE));
 
         db<Init>(INF) << "INIT ends here!" << endl;
 

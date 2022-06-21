@@ -10,20 +10,23 @@ void CPU::init()
 {
     db<Init, CPU>(TRC) << "CPU::init()" << endl;
 
-    if(Traits<MMU>::enabled)
-        MMU::init();
-    else
-        db<Init, MMU>(WRN) << "MMU is disabled!" << endl;
-
+    if(CPU::id() == 0) {
+        if(Traits<MMU>::enabled)
+            MMU::init();
+        else
+            db<Init, MMU>(WRN) << "MMU is disabled!" << endl;
+    }
 #ifdef __TSC_H
-    if(Traits<TSC>::enabled)
-        TSC::init();
+        if(Traits<TSC>::enabled)
+            TSC::init();
 #endif
 
 #ifdef __PMU_H
-    if(Traits<PMU>::enabled)
-        PMU::init();
+        if(Traits<PMU>::enabled)
+            PMU::init();
 #endif
+    // }
+    // CPU::smp_barrier(Traits<Machine>::CPUS);
 }
 
 __END_SYS
