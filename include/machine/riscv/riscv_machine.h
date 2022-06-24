@@ -35,7 +35,14 @@ public:
     static const UUID & uuid() { return System::info()->bm.uuid; }
 
 private:
-    static void smp_barrier_init(unsigned int n_cpus);
+    // static void smp_barrier_init(unsigned int n_cpus) {
+    //     db<Machine>(TRC) << "SMP::init()" << endl;
+    //     IC::int_vector(IC::IRQ_MAC_SOFT, IC::ipi_eoi);
+    //     for (unsigned int i = 1; i < n_cpus; i++) {
+    //         IC::ipi(i, IC::IRQ_MAC_SOFT); // default code for IPI (it could be any value except 0)
+    //     }
+    // }
+
     static void pre_init(System_Info * si) {}
     static void init();
 };

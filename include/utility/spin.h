@@ -71,6 +71,31 @@ private:
     volatile bool _locked;
 };
 
+class Atomic_Spin // TODO verify
+{
+public:
+    Atomic_Spin(): _locked(false) {}
+
+    void acquire() {
+        ASM("       li             t0, 1          \n");
+        ASM("again: lw             t1, (%0)       \n" :: "r"(&_locked));
+        ASM("       bnez           t1, again      \n");
+        ASM("       amoswap.d.aq   t1, t0, (%0)   \n" :: "r"(&_locked));
+        ASM("       bnez           t1, again      \n");
+
+        db<Spin>(TRC) << "Spin::acquire[SPIN=" << this << "]()" << endl;
+    }
+
+    void release() {
+        ASM("amoswap.d.rl x0, x0, (%0) \n" :: "r"(&_locked));
+
+        db<Spin>(TRC) << "Spin::release[SPIN=" << this << "]()}" << endl;
+    }
+
+private:
+    volatile bool _locked;
+};
+
 __END_UTIL
 
 #endif

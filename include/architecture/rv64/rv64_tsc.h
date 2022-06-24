@@ -37,7 +37,7 @@ public:
     static Time_Stamp time_stamp() { return reg(MTIME); }
 
 private:
-    static void init() {}
+    static void init();
 
     static volatile CPU::Reg64 & reg(unsigned int o) { return reinterpret_cast<volatile CPU::Reg64 *>(Memory_Map::CLINT_BASE)[o / sizeof(CPU::Reg64)]; }
 };

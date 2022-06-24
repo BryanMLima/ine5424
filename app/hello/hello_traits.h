@@ -20,7 +20,7 @@ template<> struct Traits<Build>: public Traits_Tokens
     // Default flags
     static const bool enabled = true;
     static const bool monitored = true;
-    static const bool debugged = true;
+    static const bool debugged = false;
     static const bool hysterically_debugged = true;
 
     // Default aspects
@@ -105,6 +105,7 @@ template<> struct Traits<System>: public Traits<Build>
     static const unsigned int mode = Traits<Build>::MODE;
     static const bool multithread = (Traits<Application>::MAX_THREADS > 1);
     static const bool multiheap = Traits<Scratchpad>::enabled;
+    static const bool multicore = (Traits<Build>::CPUS > 1) && multithread;
 
     static const unsigned long LIFE_SPAN = 1 * YEAR; // s
     static const unsigned int DUTY_CYCLE = 1000000; // ppm

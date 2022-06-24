@@ -74,7 +74,11 @@ Setup::Setup()
     CPU::smp_barrier(Traits<Machine>::CPUS);
 
     // SETUP ends here, so let's transfer control to the next stage (INIT or APP)
-    call_next();
+    // call_next();
+    if(CPU::id() == 0)
+        _start();   // only CPU 0 runs crt0 fully
+    else
+        _init();
 }
 
 

@@ -101,6 +101,9 @@ void Thread::priority(const Criterion & c)
 
     db<Thread>(TRC) << "Thread::priority(this=" << this << ",prio=" << c << ")" << endl;
 
+    unsigned int old_cpu = _link.rank().queue();
+    unsigned int new_cpu = c.queue();
+
     if(_state != RUNNING) { // reorder the scheduling queue
         _scheduler.remove(this);
         _link.rank(c);
@@ -109,7 +112,13 @@ void Thread::priority(const Criterion & c)
         _link.rank(c);
 
     if(preemptive)
-        reschedule();
+        if(smp) {
+    	    if(old_cpu != CPU::id())
+    	        reschedule(old_cpu);
+    	    if(new_cpu != CPU::id())
+    	        reschedule(new_cpu);
+    	} else
+    	    reschedule();
 
     unlock();
 }
@@ -193,7 +202,7 @@ void Thread::resume()
         _scheduler.resume(this);
 
         if(preemptive)
-            reschedule();
+            reschedule(_link.rank().queue());
     } else
         db<Thread>(WRN) << "Resume called for unsuspended object!" << endl;
 
@@ -275,7 +284,7 @@ void Thread::wakeup(Queue * q)
         _scheduler.resume(t);
 
         if(preemptive)
-            reschedule();
+            reschedule(t->_link.rank().queue());
     }
 }
 
@@ -295,7 +304,9 @@ void Thread::wakeup_all(Queue * q)
         }
 
         if(preemptive)
-            reschedule();
+            for(unsigned int i = 0; i < Criterion::QUEUES; i++)
+                if(cpus & (1 << i))
+                    reschedule(i);
     }
 }
 
@@ -313,6 +324,17 @@ void Thread::reschedule()
     dispatch(prev, next);
 }
 
+void Thread::reschedule(unsigned int cpu)
+{
+    assert(locked()); // locking handled by caller
+
+    if(!smp || (cpu == CPU::id()))
+        reschedule();
+    else {
+        db<Thread>(TRC) << "Thread::reschedule(cpu=" << cpu << ")" << endl;
+        IC::ipi(cpu, IC::IRQ_MAC_SOFT);
+    }
+}
 
 void Thread::time_slicer(IC::Interrupt_Id i)
 {

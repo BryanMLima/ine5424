@@ -162,7 +162,7 @@ private:
     static void exception(Interrupt_Id i);
 
     // Physical handler
-    static void entry() __attribute((naked, aligned(4)));
+    static void entry() __attribute((naked, aligned(4))); // TODO verify if 4 or 8
 
     static void init();
 

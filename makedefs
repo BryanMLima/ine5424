@@ -223,7 +223,7 @@ riscv_AS_FLAGS      := -march=rv32gc -mabi=ilp32d
 riscv_LD_FLAGS      := -m elf32lriscv_ilp32f --no-relax
 riscv_EMULATOR     = qemu-system-riscv32 $(QEMU_DEBUG) -machine sifive_u -cpu rv32 -smp 2 -m $(MEM_SIZE)k -serial mon:stdio -bios none -nographic -no-reboot -kernel  
 endif 
-riscv_DEBUGGER		:= gdb-multiarch -ex "set architecture riscv:rv64"
+riscv_DEBUGGER		:= gdb
 riscv_FLASHER		:= 
 riscv_MAGIC		:= --nmagic
 riscv_CODE_NAME		:= .init
@@ -249,7 +249,8 @@ MACH_LD_FLAGS		:= $($(MACH)_LD_FLAGS)
 MACH_CODE_NAME		:= $($(MACH)_CODE_NAME)
 MACH_DATA_NAME		:= $($(MACH)_DATA_NAME)
 MACH_EMULATOR		= $($(MACH)_EMULATOR)
-MACH_DEBUGGER		:= $(TERM) $($(MACH)_DEBUGGER) -ex "target remote:1235" -ex "set confirm off"
+# MACH_DEBUGGER		:= $(TERM) $($(MACH)_DEBUGGER) -ex "target remote:1235" -ex "set confirm off"
+MACH_DEBUGGER		:= $(TERM) $($(MACH)_DEBUGGER) -ex "set confirm off" -ex "set arch riscv:rv64" -ex "set schedule-multiple on" -ex "target extended-remote localhost:1235" -ex "add-inferior" -ex "inferior 2" -ex "attach 2"
 MACH_FLASHER		= $($(MACH)_FLASHER)
 MACH_MAGIC		:= $($(MACH)_MAGIC)
 MACH_IMGSUFF		:= $($(MACH)_IMG_SUFFIX)

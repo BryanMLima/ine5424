@@ -13,6 +13,9 @@ class CPU: protected CPU_Common
 {
     friend class Init_System; // for CPU::init()
 
+private:
+    static const bool smp = Traits<System>::multicore;
+
 public:
     // CPU Native Data Types
     using CPU_Common::Reg8;
@@ -224,7 +227,7 @@ public:
 
     static unsigned int id() { return mhartid(); }
 
-    static unsigned int cores() { return Traits<Machine>::CPUS; }
+    static unsigned int cores() { return Traits<Build>::CPUS; }
 
     using CPU_Common::clock;
     using CPU_Common::min_clock;
@@ -285,7 +288,7 @@ public:
         return old;
     }
 
-    static void smp_barrier(unsigned long cores = CPU::cores()) { CPU_Common::smp_barrier<&finc>(cores, id());}
+    static void smp_barrier(unsigned long cores = CPU::cores()) { CPU_Common::smp_barrier<&finc>(cores, id()); }
 
     static void flush_tlb() {         ASM("sfence.vma"    : :           : "memory"); }
     static void flush_tlb(Reg addr) { ASM("sfence.vma %0" : : "r"(addr) : "memory"); }
