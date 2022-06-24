@@ -20,7 +20,7 @@ class Machine: private Machine_Common
     friend class Init_System;
 
 private:
-    static const bool smp = Traits<System>::multicore;
+    static const bool multicore = Traits<System>::multicore;
 
 public:
     Machine() {}

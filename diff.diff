@@ -1,0 +1,445 @@
+diff --git a/.vscode/settings.json b/.vscode/settings.json
+deleted file mode 100644
+index 45465e0..0000000
+--- a/.vscode/settings.json
++++ /dev/null
+@@ -1,8 +0,0 @@
+-{
+-    "files.associations": {
+-        "memory": "cpp",
+-        "random": "cpp",
+-        "optional": "cpp",
+-        "ranges": "cpp"
+-    }
+-}
+\ No newline at end of file
+diff --git a/app/cputest/cputest.cc b/app/cputest/cputest.cc
+index 3a8c415..a646e5c 100644
+--- a/app/cputest/cputest.cc
++++ b/app/cputest/cputest.cc
+@@ -12,7 +12,7 @@ int main()
+     CPU cpu;
+ 
+     {
+-        // volatile bool lock = false;
++        volatile bool lock = false;
+         // int a = 9;
+         // auto addr = (void *)&lock & 0x7;
+ 
+@@ -27,13 +27,13 @@ int main()
+         // volatile bool *p = &lock;
+         // cout << addressof(lock) << endl;
+         // cout << ((void *)&lock & 0x7) << endl;
+-        // if(cpu.tsl(lock))
+-        //     cout << "tsl(): doesn't function properly!(1)" << endl;
+-        // else
+-        //     if(cpu.tsl(lock))
+-        //         cout << "tsl(): ok" << endl;
+-        //     else
+-        //         cout << "tsl(): doesn't function properly!(2)" << endl;
++        if(cpu.tsl(lock))
++            cout << "tsl(): doesn't function properly!(1)" << endl;
++        else
++            if(cpu.tsl(lock))
++                cout << "tsl(): ok" << endl;
++            else
++                cout << "tsl(): doesn't function properly!(2)" << endl;
+     }
+     {
+         volatile int number = 100;
+diff --git a/app/cputest/cputest_traits.h b/app/cputest/cputest_traits.h
+index c16ea52..7a3702f 100644
+--- a/app/cputest/cputest_traits.h
++++ b/app/cputest/cputest_traits.h
+@@ -13,7 +13,7 @@ template<> struct Traits<Build>: public Traits_Tokens
+     static const unsigned int ARCHITECTURE = RV64;
+     static const unsigned int MACHINE = RISCV;
+     static const unsigned int MODEL = SiFive_U;
+-    static const unsigned int CPUS = 2;
++    static const unsigned int CPUS = 1;
+     static const unsigned int NODES = 1; // (> 1 => NETWORKING)
+     static const unsigned int EXPECTED_SIMULATION_TIME = 60; // s (0 => not simulated)
+ 
+diff --git a/app/hello/hello_traits.h b/app/hello/hello_traits.h
+index 8789e68..e4bfe99 100644
+--- a/app/hello/hello_traits.h
++++ b/app/hello/hello_traits.h
+@@ -13,7 +13,7 @@ template<> struct Traits<Build>: public Traits_Tokens
+     static const unsigned int ARCHITECTURE = RV64;
+     static const unsigned int MACHINE = RISCV;
+     static const unsigned int MODEL = SiFive_U;
+-    static const unsigned int CPUS = 2;
++    static const unsigned int CPUS = 1;
+     static const unsigned int NODES = 1; // (> 1 => NETWORKING)
+     static const unsigned int EXPECTED_SIMULATION_TIME = 60; // s (0 => not simulated)
+ 
+@@ -33,7 +33,7 @@ template<> struct Traits<Debug>: public Traits<Build>
+ {
+     static const bool error   = true;
+     static const bool warning = true;
+-    static const bool info    = true;
++    static const bool info    = false;
+     static const bool trace   = true;
+ };
+ 
+diff --git a/include/architecture/rv64/rv64_cpu.h b/include/architecture/rv64/rv64_cpu.h
+index 1f4eb2b..06c53b1 100644
+--- a/include/architecture/rv64/rv64_cpu.h
++++ b/include/architecture/rv64/rv64_cpu.h
+@@ -222,9 +222,9 @@ public:
+     static Reg fr() { Reg r; ASM("mv %0, a0" :  "=r"(r)); return r; }
+     static void fr(Reg r) {  ASM("mv a0, %0" : : "r"(r) :); }
+ 
+-    static unsigned int id() { return mhartid(); }
++    static unsigned int id() { return 0; }
+ 
+-    static unsigned int cores() { return Traits<Machine>::CPUS; }
++    static unsigned int cores() { return 1; }
+ 
+     using CPU_Common::clock;
+     using CPU_Common::min_clock;
+@@ -285,7 +285,7 @@ public:
+         return old;
+     }
+ 
+-    static void smp_barrier(unsigned long cores = CPU::cores()) { CPU_Common::smp_barrier<&finc>(cores, id());}
++    static void smp_barrier(unsigned long cores = CPU::cores()) {}
+ 
+     static void flush_tlb() {         ASM("sfence.vma"    : :           : "memory"); }
+     static void flush_tlb(Reg addr) { ASM("sfence.vma %0" : : "r"(addr) : "memory"); }
+diff --git a/include/machine/riscv/riscv_ic.h b/include/machine/riscv/riscv_ic.h
+index 40ce643..5f8fa3d 100644
+--- a/include/machine/riscv/riscv_ic.h
++++ b/include/machine/riscv/riscv_ic.h
+@@ -152,8 +152,6 @@ public:
+         reg(MSIP + cpu * MSIP_CORE_OFFSET) = 1;
+     }
+ 
+-    static void ipi_eoi(Interrupt_Id i) { reg(MSIP + CPU::id() * MSIP_CORE_OFFSET) = 0; }
+-
+ private:
+     static void dispatch();
+ 
+diff --git a/include/machine/riscv/riscv_machine.h b/include/machine/riscv/riscv_machine.h
+index 81b4128..97327ce 100644
+--- a/include/machine/riscv/riscv_machine.h
++++ b/include/machine/riscv/riscv_machine.h
+@@ -19,9 +19,6 @@ class Machine: private Machine_Common
+     friend class Init_Begin;
+     friend class Init_System;
+ 
+-private:
+-    static const bool smp = Traits<System>::multicore;
+-
+ public:
+     Machine() {}
+ 
+@@ -35,7 +32,6 @@ public:
+     static const UUID & uuid() { return System::info()->bm.uuid; }
+ 
+ private:
+-    static void smp_barrier_init(unsigned int n_cpus);
+     static void pre_init(System_Info * si) {}
+     static void init();
+ };
+diff --git a/include/machine/riscv/riscv_timer.h b/include/machine/riscv/riscv_timer.h
+index 63a59cb..ea8438d 100644
+--- a/include/machine/riscv/riscv_timer.h
++++ b/include/machine/riscv/riscv_timer.h
+@@ -46,8 +46,7 @@ protected:
+         else
+             db<Timer>(WRN) << "Timer not installed!"<< endl;
+ 
+-        for(unsigned int i = 0; i < Traits<Machine>::CPUS; i++)
+-            _current[i] = _initial;
++        _current = _initial;
+     }
+ 
+ public:
+@@ -57,13 +56,13 @@ public:
+         _channels[_channel] = 0;
+     }
+ 
+-    Tick read() { return _current[CPU::id()]; }
++    Tick read() { return _current; }
+ 
+     int restart() {
+         db<Timer>(TRC) << "Timer::restart() => {f=" << frequency() << ",h=" << reinterpret_cast<void *>(_handler) << ",count=" << _current << "}" << endl;
+ 
+-        int percentage = _current[CPU::id()] * 100 / _initial;
+-        _current[CPU::id()] = _initial;
++        int percentage = _current * 100 / _initial;
++        _current = _initial;
+ 
+         return percentage;
+     }
+@@ -81,7 +80,7 @@ private:
+     static volatile CPU::Reg64 & reg(unsigned int o) { return reinterpret_cast<volatile CPU::Reg64 *>(Memory_Map::CLINT_BASE)[o / sizeof(CPU::Reg64)]; }
+ 
+     static void config(const Hertz & frequency) {
+-        reg(MTIMECMP + MTIMECMP_CORE_OFFSET * CPU::id()) = reg(MTIME) + (CLOCK / frequency);
++        reg(MTIMECMP) = reg(MTIME) + (CLOCK / frequency);
+     }
+ 
+     static void int_handler(Interrupt_Id i);
+@@ -92,7 +91,7 @@ protected:
+     unsigned int _channel;
+     Tick _initial;
+     bool _retrigger;
+-    volatile Tick _current[Traits<Build>::CPUS];
++    volatile Tick _current;
+     Handler _handler;
+ 
+     static Timer * _channels[CHANNELS];
+diff --git a/include/machine/riscv/sifive_u/sifive_u_memory_map.h b/include/machine/riscv/sifive_u/sifive_u_memory_map.h
+index 2c4b362..0096a78 100644
+--- a/include/machine/riscv/sifive_u/sifive_u_memory_map.h
++++ b/include/machine/riscv/sifive_u/sifive_u_memory_map.h
+@@ -21,7 +21,7 @@ public:
+         RAM_TOP         = Traits<Machine>::RAM_TOP,
+         MIO_BASE        = Traits<Machine>::MIO_BASE,
+         MIO_TOP         = Traits<Machine>::MIO_TOP,
+-        BOOT_STACK      = RAM_TOP + 1 - Traits<Build>::CPUS * Traits<Machine>::STACK_SIZE, // will be used as the stack's base, not the stack pointer
++        BOOT_STACK      = RAM_TOP + 1 - Traits<Machine>::STACK_SIZE, // will be used as the stack's base, not the stack pointer
+         FREE_BASE       = RAM_BASE,
+         FREE_TOP        = BOOT_STACK,
+ 
+diff --git a/include/machine/riscv/sifive_u/sifive_u_traits.h b/include/machine/riscv/sifive_u/sifive_u_traits.h
+index 138a8f7..80c52a9 100644
+--- a/include/machine/riscv/sifive_u/sifive_u_traits.h
++++ b/include/machine/riscv/sifive_u/sifive_u_traits.h
+@@ -18,7 +18,6 @@ template<> struct Traits<Machine>: public Traits<Machine_Common>
+ {
+ public:
+     static const unsigned int NOT_USED          = 0xffffffff;
+-    static const unsigned int CPUS              = Traits<Build>::CPUS;
+ 
+     // Physical Memory
+     static const unsigned int RAM_BASE          = 0x80000000;                           // 2 GB
+@@ -46,7 +45,7 @@ public:
+     // Default Sizes and Quantities
+     static const unsigned int MAX_THREADS       = 16;
+     static const unsigned int STACK_SIZE        = 64 * 1024;
+-     static const unsigned int HEAP_SIZE        = (MAX_THREADS + CPUS) * STACK_SIZE;    // threads (including idles for each CPU) are the largest objects allocated from the heap
++    static const unsigned int HEAP_SIZE         = 1 * 1024 * 1024;
+ };
+ 
+ template <> struct Traits<IC>: public Traits<Machine_Common>
+@@ -59,7 +58,7 @@ template <> struct Traits<Timer>: public Traits<Machine_Common>
+     static const bool debugged = hysterically_debugged;
+ 
+     static const unsigned int UNITS = 1;
+-    static const unsigned int CLOCK = 1000000;
++    static const unsigned int CLOCK = 10000000;
+ 
+     // Meaningful values for the timer frequency range from 100 to 10000 Hz. The
+     // choice must respect the scheduler time-slice, i. e., it must be higher
+diff --git a/makedefs b/makedefs
+index 8ab6f6f..44a293b 100644
+--- a/makedefs
++++ b/makedefs
+@@ -211,7 +211,7 @@ ifeq ($(ARCH),rv64)
+ riscv_CC_FLAGS		:= -march=rv64gc -mabi=lp64 -Wl, -mno-relax -mcmodel=medany
+ riscv_AS_FLAGS		:= -march=rv64gc -mabi=lp64
+ riscv_LD_FLAGS		:= -m elf64lriscv_lp64f --no-relax
+-riscv_EMULATOR		= qemu-system-riscv64 $(QEMU_DEBUG) -machine sifive_u -smp $(CPUS) -m $(MEM_SIZE)k -serial mon:stdio -bios none -nographic -no-reboot $(BOOT_ROM) -kernel 
++riscv_EMULATOR		= qemu-system-riscv64 $(QEMU_DEBUG) -machine sifive_u -smp 2 -m $(MEM_SIZE)k -serial mon:stdio -bios none -nographic -no-reboot $(BOOT_ROM) -kernel 
+ # riscv_EMULATOR		= qemu-system-riscv64 $(QEMU_DEBUG) -machine sifive_u -smp $(CPUS) -m $(MEM_SIZE)k -serial mon:stdio -bios none -nographic -no-reboot $(BOOT_ROM) -kernel 
+ # riscv_CC_FLAGS      := -march=rv32gc -mabi=ilp32f -Wl, -mno-relax
+ # riscv_AS_FLAGS      := -march=rv32gc -mabi=ilp32f
+diff --git a/src/api/system_init.cc b/src/api/system_init.cc
+index 17fc6b2..2522ce5 100644
+--- a/src/api/system_init.cc
++++ b/src/api/system_init.cc
+@@ -8,10 +8,8 @@ __BEGIN_SYS
+ 
+ void System::init()
+ {
+-    if(CPU::id() == 0) {
+-        if(Traits<Alarm>::enabled)
+-            Alarm::init();
+-    }
++    if(Traits<Alarm>::enabled)
++        Alarm::init();
+ 
+     if(Traits<Thread>::enabled)
+         Thread::init();
+diff --git a/src/architecture/rv64/rv64_cpu_init.cc b/src/architecture/rv64/rv64_cpu_init.cc
+index a80c596..64c1621 100644
+--- a/src/architecture/rv64/rv64_cpu_init.cc
++++ b/src/architecture/rv64/rv64_cpu_init.cc
+@@ -10,23 +10,20 @@ void CPU::init()
+ {
+     db<Init, CPU>(TRC) << "CPU::init()" << endl;
+ 
+-    if(CPU::id() == 0) {
+-        if(Traits<MMU>::enabled)
+-            MMU::init();
+-        else
+-            db<Init, MMU>(WRN) << "MMU is disabled!" << endl;
+-    }
++    if(Traits<MMU>::enabled)
++        MMU::init();
++    else
++        db<Init, MMU>(WRN) << "MMU is disabled!" << endl;
++
+ #ifdef __TSC_H
+-        if(Traits<TSC>::enabled)
+-            TSC::init();
++    if(Traits<TSC>::enabled)
++        TSC::init();
+ #endif
+ 
+ #ifdef __PMU_H
+-        if(Traits<PMU>::enabled)
+-            PMU::init();
++    if(Traits<PMU>::enabled)
++        PMU::init();
+ #endif
+-    // }
+-    // CPU::smp_barrier(Traits<Machine>::CPUS);
+ }
+ 
+ __END_SYS
+diff --git a/src/init/init_end.cc b/src/init/init_end.cc
+index 7d3f9a2..f425a89 100644
+--- a/src/init/init_end.cc
++++ b/src/init/init_end.cc
+@@ -22,7 +22,7 @@ public:
+         }
+ 
+         if(Memory_Map::BOOT_STACK != Memory_Map::NOT_USED)
+-            MMU::free(Memory_Map::BOOT_STACK, MMU::pages(Traits<Machine>::CPUS * Traits<Machine>::STACK_SIZE));
++            MMU::free(Memory_Map::BOOT_STACK, MMU::pages(Traits<Machine>::STACK_SIZE));
+ 
+         db<Init>(INF) << "INIT ends here!" << endl;
+ 
+diff --git a/src/init/init_system.cc b/src/init/init_system.cc
+index c11f801..0f6c151 100644
+--- a/src/init/init_system.cc
++++ b/src/init/init_system.cc
+@@ -15,30 +15,26 @@ private:
+ 
+ public:
+     Init_System() {
+-        if(CPU::mhartid() == 0) {
+-            db<Init>(TRC) << "Init_System()" << endl;
+-
+-            db<Init>(INF) << "Init:si=" << *System::info() << endl;
+-
+-            db<Init>(INF) << "Initializing the architecture: " << endl;
+-            CPU::init();
+-
+-            db<Init>(INF) << "Initializing system's heap: " << endl;
+-            if(Traits<System>::multiheap) {
+-                System::_heap_segment = new (&System::_preheap[0]) Segment(HEAP_SIZE, Segment::Flags::SYS);
+-                char * heap;
+-                if(Memory_Map::SYS_HEAP == Traits<Machine>::NOT_USED)
+-                    heap = Address_Space(MMU::current()).attach(System::_heap_segment);
+-                else
+-                    heap = Address_Space(MMU::current()).attach(System::_heap_segment, Memory_Map::SYS_HEAP);
+-                if(!heap)
+-                    db<Init>(ERR) << "Failed to initialize the system's heap!" << endl;
+-                System::_heap = new (&System::_preheap[sizeof(Segment)]) Heap(heap, System::_heap_segment->size());
+-            } else
+-                System::_heap = new (&System::_preheap[0]) Heap(MMU::alloc(MMU::pages(HEAP_SIZE)), HEAP_SIZE);
+-        }
+-
+-        CPU::smp_barrier(Traits<Machine>::CPUS);
++        db<Init>(TRC) << "Init_System()" << endl;
++
++        db<Init>(INF) << "Init:si=" << *System::info() << endl;
++
++        db<Init>(INF) << "Initializing the architecture: " << endl;
++        CPU::init();
++
++        db<Init>(INF) << "Initializing system's heap: " << endl;
++        if(Traits<System>::multiheap) {
++            System::_heap_segment = new (&System::_preheap[0]) Segment(HEAP_SIZE, Segment::Flags::SYS);
++            char * heap;
++            if(Memory_Map::SYS_HEAP == Traits<Machine>::NOT_USED)
++                heap = Address_Space(MMU::current()).attach(System::_heap_segment);
++            else
++                heap = Address_Space(MMU::current()).attach(System::_heap_segment, Memory_Map::SYS_HEAP);
++            if(!heap)
++                db<Init>(ERR) << "Failed to initialize the system's heap!" << endl;
++            System::_heap = new (&System::_preheap[sizeof(Segment)]) Heap(heap, System::_heap_segment->size());
++        } else
++            System::_heap = new (&System::_preheap[0]) Heap(MMU::alloc(MMU::pages(HEAP_SIZE)), HEAP_SIZE);
+ 
+         db<Init>(INF) << "Initializing the machine: " << endl;
+         Machine::init();
+diff --git a/src/machine/riscv/riscv_timer_init.cc b/src/machine/riscv/riscv_timer_init.cc
+index 8eaf492..8c2e24f 100644
+--- a/src/machine/riscv/riscv_timer_init.cc
++++ b/src/machine/riscv/riscv_timer_init.cc
+@@ -12,8 +12,7 @@ void Timer::init()
+ 
+     assert(CPU::int_disabled());
+ 
+-    if(!Traits<System>::multicore || (CPU::id() == 0))
+-        IC::int_vector(IC::INT_SYS_TIMER, int_handler);
++    IC::int_vector(IC::INT_SYS_TIMER, int_handler);
+ 
+     reset();
+     IC::enable(IC::INT_SYS_TIMER);
+diff --git a/src/setup/setup_sifive_u.cc b/src/setup/setup_sifive_u.cc
+index 015832c..63ad625 100644
+--- a/src/setup/setup_sifive_u.cc
++++ b/src/setup/setup_sifive_u.cc
+@@ -57,21 +57,18 @@ private:
+ Setup::Setup()
+ {
+     CPU::int_disable(); // interrupts will be re-enabled at init_end
+-    if(CPU::id() == 0) {
+-        Display::init();
+ 
+-        si = reinterpret_cast<System_Info *>(&__boot_time_system_info);
+-        if(si->bm.n_cpus > Traits<Machine>::CPUS)
+-            si->bm.n_cpus = Traits<Machine>::CPUS;
++    Display::init();
+ 
+-        db<Setup>(TRC) << "Setup(si=" << reinterpret_cast<void *>(si) << ",sp=" << CPU::sp() << ")" << endl;
+-        db<Setup>(INF) << "Setup:si=" << *si << endl;
++    si = reinterpret_cast<System_Info *>(&__boot_time_system_info);
++    if(si->bm.n_cpus > Traits<Machine>::CPUS)
++        si->bm.n_cpus = Traits<Machine>::CPUS;
+ 
+-        // Print basic facts about this EPOS instance
+-        say_hi();
+-    }
++    db<Setup>(TRC) << "Setup(si=" << reinterpret_cast<void *>(si) << ",sp=" << CPU::sp() << ")" << endl;
++    db<Setup>(INF) << "Setup:si=" << *si << endl;
+ 
+-    CPU::smp_barrier(Traits<Machine>::CPUS);
++    // Print basic facts about this EPOS instance
++    say_hi();
+ 
+     // SETUP ends here, so let's transfer control to the next stage (INIT or APP)
+     call_next();
+@@ -119,7 +116,7 @@ void Setup::call_next()
+     // Check for next stage and obtain the entry point
+     Log_Addr pc = &_start;
+ 
+-    db<Setup>(WRN) << "SETUP ends here!" << endl;
++    db<Setup>(INF) << "SETUP ends here!" << endl;
+ 
+     // Call the next stage
+     static_cast<void (*)()>(pc)();
+@@ -134,14 +131,14 @@ using namespace EPOS::S;
+ 
+ void _entry() // machine mode
+ {
+-    if(CPU::id() != 0)                             // SiFive-U requires 2 cores, so we disable core 1 here
++    if(CPU::mhartid() != 0)                             // SiFive-U requires 2 cores, so we disable core 1 here
+         CPU::halt();
+ 
+     CPU::mstatusc(CPU::MIE);                            // disable interrupts (they will be reenabled at Init_End)
+     CPU::mies(CPU::MSI);                                // enable interrupts at CLINT so IPI and timer can be triggered
+     CLINT::mtvec(CLINT::DIRECT, _int_entry);            // setup a preliminary machine mode interrupt handler pointing it to _int_entry
+ 
+-    CPU::sp(Memory_Map::BOOT_STACK + Traits<Machine>::STACK_SIZE * (CPU::id() + 1) - sizeof(long)); // set this hart stack (the first stack is reserved for _int_m2s
++    CPU::sp(Memory_Map::BOOT_STACK + Traits<Machine>::STACK_SIZE - sizeof(long)); // set this hart stack
+ 
+     Machine::clear_bss();
+ 

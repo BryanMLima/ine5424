@@ -14,7 +14,7 @@ __BEGIN_SYS
 volatile unsigned int Thread::_thread_count;
 Scheduler_Timer * Thread::_timer;
 Scheduler<Thread> Thread::_scheduler;
-
+Spin Thread::_lock;
 
 void Thread::constructor_prologue(unsigned int stack_size)
 {
@@ -43,7 +43,7 @@ void Thread::constructor_epilogue(Log_Addr entry, unsigned int stack_size)
         _scheduler.suspend(this);
 
     if(preemptive && (_state == READY) && (_link.rank() != IDLE))
-        reschedule();
+        reschedule(_link.rank().queue());
 
     unlock();
 }
@@ -111,14 +111,15 @@ void Thread::priority(const Criterion & c)
     } else
         _link.rank(c);
 
-    if(preemptive)
-        if(smp) {
+    if(preemptive) {
+        if(multicore) {
     	    if(old_cpu != CPU::id())
     	        reschedule(old_cpu);
     	    if(new_cpu != CPU::id())
     	        reschedule(new_cpu);
     	} else
     	    reschedule();
+    }
 
     unlock();
 }
@@ -296,17 +297,20 @@ void Thread::wakeup_all(Queue * q)
     assert(locked()); // locking handled by caller
 
     if(!q->empty()) {
+        unsigned int cpus = 0;
         while(!q->empty()) {
             Thread * t = q->remove()->object();
             t->_state = READY;
             t->_waiting = 0;
             _scheduler.resume(t);
+            cpus |= 1 << t->_link.rank().queue();
         }
 
-        if(preemptive)
+        if(preemptive) {
             for(unsigned int i = 0; i < Criterion::QUEUES; i++)
                 if(cpus & (1 << i))
                     reschedule(i);
+        }
     }
 }
 
@@ -328,11 +332,11 @@ void Thread::reschedule(unsigned int cpu)
 {
     assert(locked()); // locking handled by caller
 
-    if(!smp || (cpu == CPU::id()))
+    if(!multicore || (cpu == CPU::id()))
         reschedule();
     else {
         db<Thread>(TRC) << "Thread::reschedule(cpu=" << cpu << ")" << endl;
-        IC::ipi(cpu, IC::IRQ_MAC_SOFT);
+        IC::ipi(cpu, CLINT::IRQ_MAC_SOFT);
     }
 }
 
@@ -370,36 +374,43 @@ void Thread::dispatch(Thread * prev, Thread * next, bool charge, bool award)
         }
         db<Thread>(INF) << "Thread::dispatch:next={" << next << ",ctx=" << *next->_context << "}" << endl;
 
+        if(multicore)
+            _lock.release();
+
         // The non-volatile pointer to volatile pointer to a non-volatile context is correct
         // and necessary because of context switches, but here, we are locked() and
         // passing the volatile to switch_constext forces it to push prev onto the stack,
         // disrupting the context (it doesn't make a difference for Intel, which already saves
         // parameters on the stack anyway).
         CPU::switch_context(const_cast<Context **>(&prev->_context), next->_context);
+        if(multicore)
+            _lock.acquire();
     }
 }
 
 
 int Thread::idle()
 {
-    db<Thread>(TRC) << "Thread::idle(this=" << running() << ")" << endl;
+    db<Thread>(TRC) << "Thread::idle(cpu=" << CPU::id() << ",this=" << running() << ")" << endl;
 
-    while(_thread_count > 1) { // someone else besides idle
+    while(_thread_count > CPU::cores()) { // someone else besides idles
         if(Traits<Thread>::trace_idle)
-            db<Thread>(TRC) << "Thread::idle(this=" << running() << ")" << endl;
+            db<Thread>(TRC) << "Thread::idle(cpu=" << CPU::id() << ",this=" << running() << ")" << endl;
 
         CPU::int_enable();
         CPU::halt();
     }
 
     CPU::int_disable();
-    db<Thread>(WRN) << "The last thread has exited!" << endl;
-    if(reboot) {
-        db<Thread>(WRN) << "Rebooting the machine ..." << endl;
-        Machine::reboot();
-    } else {
-        db<Thread>(WRN) << "Halting the machine ..." << endl;
-        CPU::halt();
+    if(CPU::id() == 0) {
+        db<Thread>(WRN) << "The last thread has exited!" << endl;
+        if(reboot) {
+            db<Thread>(WRN) << "Rebooting the machine ..." << endl;
+            Machine::reboot();
+        } else {
+            db<Thread>(WRN) << "Halting the machine ..." << endl;
+            CPU::halt();
+        }
     }
 
     // Some machines will need a little time to actually reboot

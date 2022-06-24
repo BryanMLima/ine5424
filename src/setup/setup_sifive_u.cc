@@ -7,6 +7,7 @@
 
 extern "C" {
     void _start();
+    void _init();
 
     void _int_entry();
 
@@ -71,7 +72,7 @@ Setup::Setup()
         say_hi();
     }
 
-    CPU::smp_barrier(Traits<Machine>::CPUS);
+    // CPU::smp_barrier(Traits<Machine>::CPUS);
 
     // SETUP ends here, so let's transfer control to the next stage (INIT or APP)
     // call_next();
@@ -138,8 +139,8 @@ using namespace EPOS::S;
 
 void _entry() // machine mode
 {
-    if(CPU::id() != 0)                             // SiFive-U requires 2 cores, so we disable core 1 here
-        CPU::halt();
+    // if(CPU::id() != 0)                             // SiFive-U requires 2 cores, so we disable core 1 here
+    //     CPU::halt();
 
     CPU::mstatusc(CPU::MIE);                            // disable interrupts (they will be reenabled at Init_End)
     CPU::mies(CPU::MSI);                                // enable interrupts at CLINT so IPI and timer can be triggered

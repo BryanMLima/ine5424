@@ -19,12 +19,10 @@ public:
     Init_Application() {
         db<Init>(TRC) << "Init_Application()" << endl;
 
-        if(!Traits<System>::multitask) {
+        CPU::smp_barrier();
+        if(CPU::id() != 0) {
             CPU::smp_barrier();
-            if(CPU::id() != 0) {
-                CPU::smp_barrier();
-                return;
-            }
+            return;
         }
 
         // Initialize Application's heap

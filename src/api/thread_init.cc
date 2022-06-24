@@ -13,6 +13,8 @@ void Thread::init()
 {
     db<Init, Thread>(TRC) << "Thread::init()" << endl;
 
+    CPU::smp_barrier();
+
     Criterion::init();
 
     typedef int (Main)();
@@ -21,10 +23,16 @@ void Thread::init()
     // In this case, _init will have already been called, before Init_Application to construct MAIN's global objects.
     Main * main = reinterpret_cast<Main *>(__epos_app_entry);
 
-    new (SYSTEM) Thread(Thread::Configuration(Thread::RUNNING, Thread::MAIN), main);
+    if(CPU::id() == 0) {
+        new (SYSTEM) Thread(Thread::Configuration(Thread::RUNNING, Thread::MAIN), main);
 
-    // Idle thread creation does not cause rescheduling (see Thread::constructor_epilogue)
-    new (SYSTEM) Thread(Thread::Configuration(Thread::READY, Thread::IDLE), &Thread::idle);
+        // Idle thread creation does not cause rescheduling (see Thread::constructor_epilogue)
+        new (SYSTEM) Thread(Thread::Configuration(Thread::READY, Thread::IDLE), &Thread::idle);
+    } else {
+        new (SYSTEM) Thread(Thread::Configuration(Thread::RUNNING, Thread::IDLE), &Thread::idle);
+    }
+
+    CPU::smp_barrier();
 
     // The installation of the scheduler timer handler does not need to be done after the
     // creation of threads, since the constructor won't call reschedule() which won't call
@@ -32,13 +40,14 @@ void Thread::init()
     // Letting reschedule() happen during thread creation is also harmless, since MAIN is
     // created first and dispatch won't replace it nor by itself neither by IDLE (which
     // has a lower priority)
-    if(Criterion::timed)
+    if(Criterion::timed && (CPU::id() == 0))
         _timer = new (SYSTEM) Scheduler_Timer(QUANTUM, time_slicer);
 
     // No more interrupts until we reach init_end
     CPU::int_disable();
 
     // Transition from CPU-based locking to thread-based locking
+    CPU::smp_barrier();
     This_Thread::not_booting();
 }
 

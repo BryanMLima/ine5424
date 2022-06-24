@@ -16,6 +16,8 @@ public:
     Init_End() {
         db<Init>(TRC) << "Init_End()" << endl;
 
+        CPU::smp_barrier();
+
         if(!Traits<System>::multithread) {
             CPU::int_enable();
             return;
@@ -33,6 +35,8 @@ public:
         Thread * first = Thread::self();
 
         db<Init, Thread>(INF) << "Dispatching the first thread: " << first << endl;
+
+        CPU::smp_barrier();
 
         // Interrupts have been disable at Thread::init() and will be reenabled by CPU::Context::load()
         // but we first reset the timer to avoid getting a time interrupt during load()

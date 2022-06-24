@@ -33,8 +33,8 @@ template<> struct Traits<Debug>: public Traits<Build>
 {
     static const bool error   = true;
     static const bool warning = true;
-    static const bool info    = true;
-    static const bool trace   = true;
+    static const bool info    = false;
+    static const bool trace   = false;
 };
 
 template<> struct Traits<Lists>: public Traits<Build>
@@ -119,6 +119,7 @@ template<> struct Traits<System>: public Traits<Build>
 template<> struct Traits<Thread>: public Traits<Build>
 {
     static const bool enabled = Traits<System>::multithread;
+    static const bool multicore = Traits<System>::multicore;
     static const bool trace_idle = hysterically_debugged;
     static const bool simulate_capacity = false;
     static const unsigned int QUANTUM = 10000; // us
