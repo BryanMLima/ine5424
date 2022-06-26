@@ -140,8 +140,9 @@ public:
 
     template <int (* finc)(volatile int &)>
     static void smp_barrier(unsigned int cores, unsigned int id) {
-        if(cores > 1) {
+        if(cores > 1 && Traits<System>::multicore) {
             static volatile int ready[2];
+            // static volatile int __attribute__((aligned(8))) ready[2];
             static volatile int i;
 
             int j = i;

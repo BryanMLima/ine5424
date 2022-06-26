@@ -160,6 +160,42 @@ public:
     void update();
 };
 
+// Multicore Algorithms
+class Variable_Queue_Scheduler
+{
+protected:
+    Variable_Queue_Scheduler(unsigned int queue): _queue(queue) {};
+
+    const volatile unsigned int & queue() const volatile { return _queue; }
+    void queue(unsigned int q) { _queue = q; }
+
+protected:
+    volatile unsigned int _queue;
+    static volatile unsigned int _next_queue;
+};
+
+// Global Round-Robin
+class GRR: public RR
+{
+public:
+    static const unsigned int HEADS = Traits<Machine>::CPUS;
+
+public:
+    template <typename ... Tn>
+    GRR(int p = NORMAL, Tn & ... an): RR(p) {}
+
+    static unsigned int current_head() { return CPU::id(); }
+};
+
+
 __END_SYS
+
+__BEGIN_UTIL
+
+// Scheduling Queues
+template<typename T>
+class Scheduling_Queue<T, GRR>:
+public Multihead_Scheduling_List<T> {};
+__END_UTIL
 
 #endif

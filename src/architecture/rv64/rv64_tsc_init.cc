@@ -10,7 +10,6 @@ void TSC::init()
     db<Init, TSC>(TRC) << "TSC::init()" << endl;
 
     if(CPU::id() == 0) {
-        // Set timer to 0
         reg(MTIME) = 0;
     }
 }

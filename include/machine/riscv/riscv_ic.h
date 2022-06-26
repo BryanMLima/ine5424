@@ -93,7 +93,8 @@ public:
     using IC_Common::Interrupt_Handler;
 
     enum {
-        INT_SYS_TIMER = EXCS + IRQ_MAC_TIMER
+        INT_SYS_TIMER = EXCS + IRQ_MAC_TIMER,
+        INT_RESCHEDULER = EXCS + IRQ_MAC_SOFT
     };
 
 public:
@@ -162,7 +163,7 @@ private:
     static void exception(Interrupt_Id i);
 
     // Physical handler
-    static void entry() __attribute((naked, aligned(4))); // TODO verify if 4 or 8
+    static void entry() __attribute((naked, aligned(8))); // TODO verify if 4 or 8
 
     static void init();
 

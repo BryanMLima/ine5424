@@ -61,6 +61,7 @@ public:
 
 private:
     volatile bool _lock;
+    // volatile bool __attribute__((aligned(8))) _lock;
     Owner * _owner;
     Shadow * _shadow;
     unsigned int _size;

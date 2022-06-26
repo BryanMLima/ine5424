@@ -32,8 +32,6 @@ void Thread::init()
         new (SYSTEM) Thread(Thread::Configuration(Thread::RUNNING, Thread::IDLE), &Thread::idle);
     }
 
-    CPU::smp_barrier();
-
     // The installation of the scheduler timer handler does not need to be done after the
     // creation of threads, since the constructor won't call reschedule() which won't call
     // dispatch that could call timer->reset()

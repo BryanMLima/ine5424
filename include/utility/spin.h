@@ -47,6 +47,7 @@ public:
 private:
     volatile int _level;
     volatile unsigned int _owner;
+    // volatile unsigned int __attribute__((aligned(8))) _owner;
 };
 
 // Flat Spin Lock
@@ -69,32 +70,34 @@ public:
 
 private:
     volatile bool _locked;
+    // volatile bool __attribute__((aligned(8))) _locked;
 };
 
-class Atomic_Spin // TODO verify
-{
-public:
-    Atomic_Spin(): _locked(false) {}
+// class Atomic_Spin // TODO verify
+// {
+// public:
+//     Atomic_Spin(): _locked(false) {}
 
-    void acquire() {
-        ASM("       li             t0, 1          \n");
-        ASM("again: lw             t1, (%0)       \n" :: "r"(&_locked));
-        ASM("       bnez           t1, again      \n");
-        ASM("       amoswap.d.aq   t1, t0, (%0)   \n" :: "r"(&_locked));
-        ASM("       bnez           t1, again      \n");
+//     void acquire() {
+//         ASM("       li             t0, 1          \n");
+//         ASM("again: ld             t1, (%0)       \n" :: "r"(&_locked));
+//         ASM("       bnez           t1, again      \n");
+//         ASM("       amoswap.d.aq   t1, t0, (%0)   \n" :: "r"(&_locked));
+//         ASM("       bnez           t1, again      \n");
 
-        db<Spin>(TRC) << "Spin::acquire[SPIN=" << this << "]()" << endl;
-    }
+//         db<Spin>(TRC) << "Spin::acquire[SPIN=" << this << "]()" << endl;
+//     }
 
-    void release() {
-        ASM("amoswap.d.rl x0, x0, (%0) \n" :: "r"(&_locked));
+//     void release() {
+//         ASM("amoswap.d.rl x0, x0, (%0) \n" :: "r"(&_locked));
 
-        db<Spin>(TRC) << "Spin::release[SPIN=" << this << "]()}" << endl;
-    }
+//         db<Spin>(TRC) << "Spin::release[SPIN=" << this << "]()}" << endl;
+//     }
 
-private:
-    volatile bool _locked;
-};
+// private:
+//     volatile bool _locked;
+//     // volatile bool __attribute__((aligned(8))) _locked;
+// };
 
 __END_UTIL
 

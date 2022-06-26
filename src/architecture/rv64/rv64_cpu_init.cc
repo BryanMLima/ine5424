@@ -25,8 +25,7 @@ void CPU::init()
     if(Traits<PMU>::enabled)
         PMU::init();
 #endif
-    // }
-    // CPU::smp_barrier(Traits<Machine>::CPUS);
+
 }
 
 __END_SYS

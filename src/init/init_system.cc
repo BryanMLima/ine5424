@@ -15,39 +15,33 @@ private:
 
 public:
     Init_System() {
+        db<Init>(TRC) << "Init_System() antes " << endl;
+
         CPU::smp_barrier();
 
+        db<Init>(TRC) << "Init_System() Depois" << endl;
+
         if(CPU::id() == 0) {
-            db<Init>(TRC) << "Init_System()" << endl;
-
-            db<Init>(INF) << "Init:si=" << *System::info() << endl;
-
             db<Init>(INF) << "Initializing the architecture: " << endl;
             CPU::init();
 
             db<Init>(INF) << "Initializing system's heap: " << endl;
-            if(Traits<System>::multiheap) {
-                System::_heap_segment = new (&System::_preheap[0]) Segment(HEAP_SIZE, Segment::Flags::SYS);
-                char * heap;
-                if(Memory_Map::SYS_HEAP == Traits<Machine>::NOT_USED)
-                    heap = Address_Space(MMU::current()).attach(System::_heap_segment);
-                else
-                    heap = Address_Space(MMU::current()).attach(System::_heap_segment, Memory_Map::SYS_HEAP);
-                if(!heap)
-                    db<Init>(ERR) << "Failed to initialize the system's heap!" << endl;
-                System::_heap = new (&System::_preheap[sizeof(Segment)]) Heap(heap, System::_heap_segment->size());
-            } else
-                System::_heap = new (&System::_preheap[0]) Heap(MMU::alloc(MMU::pages(HEAP_SIZE)), HEAP_SIZE);
+            System::_heap = new (&System::_preheap[0]) Heap(MMU::alloc(MMU::pages(HEAP_SIZE)), HEAP_SIZE);
 
             db<Init>(INF) << "Initializing the machine: " << endl;
             Machine::init();
+            db<Init>(WRN) << "Machine init finished " << endl;
 
             CPU::smp_barrier();
         } else {
+            db<Init>(WRN) << "SOU OUTRO CPU " << endl;
             CPU::smp_barrier();
 
             CPU::init();
+            Timer::init();
         }
+
+        // CPU::smp_barrier();
 
         db<Init>(INF) << "Initializing system abstractions: " << endl;
         System::init();

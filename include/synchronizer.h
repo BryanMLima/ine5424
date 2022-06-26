@@ -47,6 +47,7 @@ public:
 
 private:
     volatile bool _locked;
+    // volatile bool __attribute__((aligned(8))) _locked;
 };
 
 
@@ -61,6 +62,7 @@ public:
 
 private:
     volatile int _value;
+    // volatile int __attribute__((aligned(8))) _value;
 };
 
 
