@@ -34,7 +34,7 @@ template<> struct Traits<Debug>: public Traits<Build>
     static const bool error   = true;
     static const bool warning = true;
     static const bool info    = false;
-    static const bool trace   = false;
+    static const bool trace   = true;
 };
 
 template<> struct Traits<Lists>: public Traits<Build>
@@ -105,7 +105,7 @@ template<> struct Traits<System>: public Traits<Build>
     static const unsigned int mode = Traits<Build>::MODE;
     static const bool multithread = (Traits<Application>::MAX_THREADS > 1);
     static const bool multiheap = false;
-    static const bool multicore = (Traits<Build>::CPUS > 1) && multithread;
+    static const bool multicore = true;
     // static const bool multicore = false;
 
     static const unsigned long LIFE_SPAN = 1 * YEAR; // s
