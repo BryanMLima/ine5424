@@ -69,8 +69,8 @@ public:
     }
 
 private:
-    volatile bool _locked;
-    // volatile bool __attribute__((aligned(8))) _locked;
+    // volatile bool _locked;
+    volatile bool __attribute__((aligned(4))) _locked;
 };
 
 // class Atomic_Spin // TODO verify
