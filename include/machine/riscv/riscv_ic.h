@@ -163,7 +163,7 @@ private:
     static void exception(Interrupt_Id i);
 
     // Physical handler
-    static void entry() __attribute((naked, aligned(8))); // TODO verify if 4 or 8
+    static void entry() __attribute((naked, aligned(8)));
 
     static void init();
 

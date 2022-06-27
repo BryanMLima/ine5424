@@ -11,8 +11,6 @@ extern "C" {
 
     void _int_entry();
 
-    extern "C" void _int_wfi() __attribute((naked, aligned(4)));
-
     // SETUP entry point is in .init (and not in .text), so it will be linked first and will be the first function after the ELF header in the image
     void _entry() __attribute__ ((used, naked, section(".init")));
     void _setup();
@@ -72,12 +70,9 @@ Setup::Setup()
 
     if(CPU::id() == 0)
         say_hi();
-
-    // SETUP ends here, so let's transfer control to the next stage (INIT or APP)
-    // call_next();
     
-    if(CPU::id() == 0) // TODO verify
-        _start();   // only CPU 0 runs crt0 fully
+    if(CPU::id() == 0)
+        _start();
     else
         _init();
 
@@ -162,13 +157,7 @@ void _entry() // machine mode
 
 void _setup() // supervisor mode
 {
-    CPU::mie(CPU::MSI);                             // enable MSI at CLINT so IPI can be triggered
-
-    // if(CPU::id() != 0) {
-    //     // CLINT::stvec(CLINT::DIRECT, _int_wfi);          // setup a supervisor mode IPI handler
-    //     CPU::int_enable();                              // enable interrupts to wait for IPI
-    //     CPU::halt();                                    // halt the hart waiting for an IPI from hart 0
-    // }
+    CPU::mie(CPU::MSI);
 
     Setup setup;
 }

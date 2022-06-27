@@ -24,7 +24,10 @@ void Thread::init()
     Main * main = reinterpret_cast<Main *>(__epos_app_entry);
 
     if(CPU::id() == 0) {
+        db<Init, Thread>(WRN) << "ENNNNNNNNNNNNTREIII AQUIII" << endl;
+
         new (SYSTEM) Thread(Thread::Configuration(Thread::RUNNING, Thread::MAIN), main);
+        // new (SYSTEM) Thread(Thread::Configuration(Thread::RUNNING, 0), reinterpret_cast<int (*)()>(main));
 
         // Idle thread creation does not cause rescheduling (see Thread::constructor_epilogue)
         new (SYSTEM) Thread(Thread::Configuration(Thread::READY, Thread::IDLE), &Thread::idle);

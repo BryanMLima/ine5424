@@ -105,7 +105,6 @@ protected:
 
     static Thread * volatile running() { return _scheduler.chosen(); }
 
-    // TODO use Atomic_Lock
     static void lock(Spin * lock = &_lock) {
         CPU::int_disable();
         if(multicore)
@@ -144,7 +143,7 @@ protected:
     static volatile unsigned int _thread_count;
     static Scheduler_Timer * _timer;
     static Scheduler<Thread> _scheduler;
-    static Spin _lock; // TODO Atomic_lock
+    static Spin _lock;
 };
 
 

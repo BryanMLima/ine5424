@@ -330,7 +330,7 @@ void Thread::reschedule()
 
 void Thread::reschedule(unsigned int cpu)
 {
-    assert(locked()); // locking handled by caller
+    assert(locked());
 
     if(!multicore || (cpu == CPU::id()))
         reschedule();
